@@ -9,11 +9,10 @@ In order to use these methods, the selected macro-energy system modelling packag
 3. Generate a planning problem.
 4. Generate an operational sub-problem given a set of inputs corresponding to one sub-period.
 
-To install GenX as a package, type:
-`]add GenX`
+To run the decomposition solvers for a given system, it is necessary to install the relevant modeling package:
 
-To install MACRO as a package, type:
-`]add git@github.com:macroenergy/Macro.git #core_structure`
+- Install GenX as a package: `]add GenX`
 
-To install Dolphyn as a package, type:
-`]add Dolphyn`
+- Install MACRO as a package: `]add git@github.com:macroenergy/Macro.git #core_structure`
+
+- Install DOLPHYN as a package: `]add Dolphyn`
