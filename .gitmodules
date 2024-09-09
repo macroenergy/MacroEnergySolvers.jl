@@ -1,0 +1,4 @@
+[submodule "src/Macro"]
+	path = src/Macro
+	url = git@github.com:macroenergy/Macro.git
+	branch = core_structure
