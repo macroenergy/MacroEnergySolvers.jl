@@ -34,7 +34,7 @@
                 {
                     "edges": {
                         "elec_edge": {
-                            "id": "MA_to_CT",
+                            "id": "MA_to_ME",
                             "start_vertex": "elec_MA",
                             "end_vertex": "elec_ME",
                             "distance": 196.5385,

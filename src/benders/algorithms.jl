@@ -1,5 +1,5 @@
 
-function benders(benders_data::Dict{Any,Any})
+function benders(planning_problem::Model,linking_variables::Vector{String},subproblems::DistributedArrays.DArray,linking_variables_sub::Dict)
 	
     #### Algorithm from:
     ### Pecci, F. and Jenkins, J. D. “Regularized Benders Decomposition for High Performance Capacity Expansion Models”. arXiv:2403.02559 [math]. URL: http://arxiv.org/abs/2403.02559.
@@ -9,12 +9,6 @@ function benders(benders_data::Dict{Any,Any})
 
 	## Start solver time
 	solver_start_time = time()
-
-    planning_problem = benders_data[:planning_problem];
-	planning_variables = benders_data[:planning_variables];
-
-	subproblems = benders_data[:subproblems];
-	planning_variables_sub = benders_data[:planning_variables_sub];
     
     #### Algorithm parameters:
 	MaxIter = 300;
@@ -27,16 +21,16 @@ function benders(benders_data::Dict{Any,Any})
 	integer_routine_flag = false
 
 	if integer_investment == 1 && stab_method != "off"
-		all_planning_variables = all_variables(planning_problem);
-		integer_variables = all_planning_variables[is_integer.(all_planning_variables)];
-		binary_variables = all_planning_variables[is_binary.(all_planning_variables)];
+		all_linking_variables = all_variables(planning_problem);
+		integer_variables = all_linking_variables[is_integer.(all_linking_variables)];
+		binary_variables = all_linking_variables[is_binary.(all_linking_variables)];
 		unset_integer.(integer_variables)
 		unset_binary.(binary_variables)
 		integer_routine_flag = true;
 	end
 
     #### Initialize UB and LB
-	planning_sol = solve_planning_problem(planning_problem,planning_variables);
+	planning_sol = solve_planning_problem(planning_problem,linking_variables);
 
     UB = Inf;
     LB = planning_sol.LB;
@@ -66,13 +60,13 @@ function benders(benders_data::Dict{Any,Any})
 		print("Updating the planning problem....")
 		time_start_update = time()
 
-		update_planning_problem_multi_cuts!(planning_problem,subop_sol,planning_sol,planning_variables_sub)
+		update_planning_problem_multi_cuts!(planning_problem,subop_sol,planning_sol,linking_variables_sub)
 		
 		time_planning_update = time()-time_start_update
 		println("done (it took $time_planning_update s).")
 
 		start_planning_sol = time()
-		unst_planning_sol = solve_planning_problem(planning_problem,planning_variables);
+		unst_planning_sol = solve_planning_problem(planning_problem,linking_variables);
 		cpu_planning_sol = time()-start_planning_sol;
 		println("Solving the planning problem required $cpu_planning_sol seconds")
 
@@ -94,7 +88,7 @@ function benders(benders_data::Dict{Any,Any})
 				UB = Inf;
 				set_integer.(integer_variables)
 				set_binary.(binary_variables)
-				planning_sol = solve_planning_problem(planning_problem,planning_variables);
+				planning_sol = solve_planning_problem(planning_problem,linking_variables);
 				LB = planning_sol.LB;
 				planning_sol_best = deepcopy(planning_sol);
 				integer_routine_flag = false;
@@ -118,7 +112,7 @@ function benders(benders_data::Dict{Any,Any})
 						fix(v,unst_planning_sol.values[name(v)];force=true)
 					end
                     println("Solving the interior level set problem with γ = $γ")
-					planning_sol = solve_int_level_set_problem(planning_problem,planning_variables,unst_planning_sol,LB,UB,γ);
+					planning_sol = solve_int_level_set_problem(planning_problem,linking_variables,unst_planning_sol,LB,UB,γ);
 					unfix.(integer_variables)
 					unfix.(binary_variables)
 					set_integer.(integer_variables)
@@ -127,7 +121,7 @@ function benders(benders_data::Dict{Any,Any})
 					set_lower_bound.(binary_variables,0.0)
 				else
                     println("Solving the interior level set problem with γ = $γ")
-					planning_sol = solve_int_level_set_problem(planning_problem,planning_variables,unst_planning_sol,LB,UB,γ);
+					planning_sol = solve_int_level_set_problem(planning_problem,linking_variables,unst_planning_sol,LB,UB,γ);
 				end
 				cpu_stab_method = time()-start_stab_method;
 				println("Solving the interior level set problem required $cpu_stab_method seconds")
@@ -142,11 +136,23 @@ function benders(benders_data::Dict{Any,Any})
 	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time)
 end
 
-function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,planning_sol::NamedTuple,planning_variables_sub::Dict)
+function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,planning_sol::NamedTuple,linking_variables_sub::Dict)
     
 	W = keys(subop_sol);
 	
-    @constraint(m,[w in W],subop_sol[w].theta_coeff*m[:vTHETA][w] >= subop_sol[w].op_cost + sum(subop_sol[w].lambda[i]*(variable_by_name(m,planning_variables_sub[w][i]) - planning_sol.values[planning_variables_sub[w][i]]) for i in 1:length(planning_variables_sub[w])));
+    @constraint(m,[w in W],subop_sol[w].theta_coeff*m[:vTHETA][w] >= subop_sol[w].op_cost + sum(subop_sol[w].lambda[i]*(variable_by_name(m,linking_variables_sub[w][i]) - planning_sol.values[linking_variables_sub[w][i]]) for i in 1:length(linking_variables_sub[w])));
 
        
+end
+
+function fix_linking_variables!(m::Model,planning_sol::NamedTuple,linking_variables_sub::Vector{String})
+	for y in linking_variables_sub
+		vy = variable_by_name(m,y);
+		fix(vy,planning_sol.values[y];force=true)
+		if is_integer(vy)
+			unset_integer(vy)
+		elseif is_binary(vy)
+			unset_binary(vy)
+		end
+	end
 end

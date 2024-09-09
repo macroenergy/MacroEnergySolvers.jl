@@ -7,15 +7,10 @@ println("###### ###### ######")
 println("Running case at $(case_path)")
 
 using MacroEnergySystemsDecomposition
+using Macro
 
-start_distributed_processes!(2,:MACRO)
+solve_model_monolithic(case_path,:MACRO)
 
-# system = Macro.load_system(case_path);
-# system_decomp = Macro.generate_decomposed_system(system);
-# planning_model,linking_variables = Macro.generate_planning_problem(system);
-# operation_model,linking_variables_sub = Macro.generate_operation_subproblem(system_decomp[5]);
-
-# # _,planning_sol,LB_hist,UB_hist,cpu_time  = Macro.benders(benders_models);
-
+solve_model_with_benders(case_path,:MACRO)
 
 println()
