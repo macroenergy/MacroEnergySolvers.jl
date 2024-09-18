@@ -13,6 +13,6 @@ To run the decomposition solvers for a given system, it is necessary to install 
 
 - Install GenX as a package: `]add GenX`
 
-- Install MACRO as a package: `]add git@github.com:macroenergy/Macro.git #core_structure`
+- Install MACRO as a package: `]add git@github.com:macroenergy/Macro.git #main`
 
 - Install DOLPHYN as a package: `]add Dolphyn`
