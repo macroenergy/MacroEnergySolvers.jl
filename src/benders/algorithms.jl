@@ -11,13 +11,13 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	solver_start_time = time()
     
     #### Algorithm parameters:
-	MaxIter = 10;
+	MaxIter = 300;
     ConvTol = 1e-3;
 	MaxCpuTime = 3600;
 	γ = 0.5;
 	stab_method ="int_level_set";
     integer_investment = false;
-	stab_method = "dynamic"; #dynamic or fixed 
+	# stab_method = "dynamic"; #dynamic or fixed 
 	cut_selection_method = "norm";
 	#############	
 
@@ -113,6 +113,27 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 			planning_sol = deepcopy(unst_planning_sol);
 		else
 			if stab_method == "int_level_set"
+
+				if k >= 2
+
+					r=(UB_hist[k-1]-UB_hist[k])/(UB_hist[k-1]-(LB_hist[k]+γ*(UB_hist[k-1]-LB_hist[k])))
+					ap=(UB_hist[k-1]-UB_hist[k])
+					pp=(UB_hist[k-1]-(LB_hist[k]+γ*(UB_hist[k-1]-LB_hist[k])))
+					println(r, ap, pp)
+					if ap>=0 && pp>=0
+						if r<=0.2
+							γ=0.9-0.5*(0.9-γ)
+							println("Increase γ: ", γ)
+						elseif 0.2<r<0.8
+							γ=γ
+							println("Keep γ: ", γ)
+						else
+							γ=0.5*γ
+							println("Decrease γ: ", γ)
+						end
+					end
+				end
+
 				start_stab_method = time()
 				if  integer_investment==1 && integer_routine_flag==false
 					unset_integer.(integer_variables)
@@ -124,6 +145,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 						fix(v,unst_planning_sol.values[name(v)];force=true)
 					end
                     println("Solving the interior level set problem with γ = $γ")
+
 					planning_sol = solve_int_level_set_problem(planning_problem,linking_variables,unst_planning_sol,LB,UB,γ);
 					unfix.(integer_variables)
 					unfix.(binary_variables)

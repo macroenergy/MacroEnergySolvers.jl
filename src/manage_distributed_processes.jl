@@ -15,7 +15,7 @@ function start_distributed_processes!(number_of_subperiods::Int64,model_type::Sy
     project = Pkg.project().path
 
     @sync for p in workers()
-        @async create_worker_process(p,project,model_type)
+        @async create_worker_process(p,project,model_type) # add a check
     end
 
     println("Number of subperiods:",number_of_subperiods)
