@@ -11,12 +11,15 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	solver_start_time = time()
     
     #### Algorithm parameters:
-	MaxIter = 300;
+	MaxIter = 10;
     ConvTol = 1e-3;
 	MaxCpuTime = 3600;
 	γ = 0.5;
 	stab_method ="int_level_set";
     integer_investment = false;
+	stab_method = "dynamic"; #dynamic or fixed 
+	cut_selection_method = "norm";
+	#############	
 
 	integer_routine_flag = false
 
@@ -39,10 +42,12 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
     UB_hist = Float64[];
     cpu_time = Float64[];
 
+	subop_sol_hist = Vector{Dict{Any, Any}}()
+
 	planning_sol_best = deepcopy(planning_sol);
 
     #### Run Benders iterations
-    for k = 0:MaxIter
+    for k = 1:MaxIter
 		
 		start_subop_sol = time();
 
@@ -57,10 +62,17 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 			UB = UBnew;
 		end
 
+		push!(subop_sol_hist, deepcopy(subop_sol))	# store the subproblem solution
+
+		# println(typeof(subop_sol))
+
+		# println(subop_sol_hist)
+
 		print("Updating the planning problem....")
 		time_start_update = time()
 
-		update_planning_problem_multi_cuts!(planning_problem,subop_sol,planning_sol,linking_variables_sub)
+		println(k)
+		update_planning_problem_multi_cuts!(planning_problem,subop_sol,subop_sol_hist, planning_sol,linking_variables_sub,k)
 		
 		time_planning_update = time()-time_start_update
 		println("done (it took $time_planning_update s).")
@@ -133,16 +145,32 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 
     end
 
-	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time)
+	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time, subop_sol_hist = subop_sol_hist)
 end
 
-function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,planning_sol::NamedTuple,linking_variables_sub::Dict)
+function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,subop_sol_hist::Vector{Dict{Any, Any}}, planning_sol::NamedTuple,linking_variables_sub::Dict, k::Int)
     
 	W = keys(subop_sol);
-	
-    @constraint(m,[w in W],subop_sol[w].theta_coeff*m[:vTHETA][w] >= subop_sol[w].op_cost + sum(subop_sol[w].lambda[i]*(variable_by_name(m,linking_variables_sub[w][i]) - planning_sol.values[linking_variables_sub[w][i]]) for i in 1:length(linking_variables_sub[w])));
 
-       
+	if k >= 2
+		for w in W
+			avoid=false
+				for j in k-1
+					if norm(subop_sol_hist[j][w].lambda.-subop_sol_hist[k][w].lambda)/norm(subop_sol_hist[j][w].lambda) <= 0.2 && norm(subop_sol_hist[j][w].op_cost.-subop_sol_hist[k][w].op_cost)/norm(subop_sol_hist[j][w].op_cost) <= 0.2
+						println("Repeated cut for week $(w) iteration $(k)!")
+						avoid=true
+						break
+					end
+				end
+				if avoid==false
+					@constraint(m,[w in W],subop_sol[w].theta_coeff*m[:vTHETA][w] >= subop_sol[w].op_cost + sum(subop_sol[w].lambda[i]*(variable_by_name(m,linking_variables_sub[w][i]) - planning_sol.values[linking_variables_sub[w][i]]) for i in 1:length(linking_variables_sub[w])));
+				end   
+		end
+	else 
+		a=@constraint(m,[w in W],subop_sol[w].theta_coeff*m[:vTHETA][w] >= subop_sol[w].op_cost + sum(subop_sol[w].lambda[i]*(variable_by_name(m,linking_variables_sub[w][i]) - planning_sol.values[linking_variables_sub[w][i]]) for i in 1:length(linking_variables_sub[w])));
+	end
+					
+
 end
 
 function fix_linking_variables!(m::Model,planning_sol::NamedTuple,linking_variables_sub::Vector{String})

@@ -14,10 +14,9 @@ function solve_model_with_benders(case_path::String,model_type::Symbol)
 
     subproblems_dict,linking_variables_sub = initialize_dist_subproblems(system_decomp,model_type)
 
-    planning_problem, planning_sol, LB_hist, UB_hist, runtime = benders(planning_problem,linking_variables,subproblems_dict,linking_variables_sub)
-
+    result = benders(planning_problem,linking_variables,subproblems_dict,linking_variables_sub)
     
-    return nothing
+    return result
 end
 
 function solve_model_monolithic(case_path::String,model_type::Symbol)

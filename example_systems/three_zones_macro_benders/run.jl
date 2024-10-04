@@ -9,8 +9,9 @@ println("Running case at $(case_path)")
 using MacroEnergySystemsDecomposition
 using Macro
 
-solve_model_monolithic(case_path,:MACRO)
+using LinearAlgebra
 
-solve_model_with_benders(case_path,:MACRO)
+# solve_model_monolithic(case_path,:MACRO)
+result = solve_model_with_benders(case_path,:MACRO)
 
 println()

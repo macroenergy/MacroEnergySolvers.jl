@@ -5,8 +5,10 @@ module MacroEnergySystemsDecomposition
     using DistributedArrays
     using ClusterManagers
     using Gurobi
+    using LinearAlgebra
     using Pkg
-
+    using Revise
+    
     using Macro
 
     const GRB_ENV = Ref{Gurobi.Env}()
