@@ -1,18 +1,16 @@
-function solve_model_with_benders(case_path::String,model_type::Symbol)
+function solve_model_with_benders(case_path::String,model::Module)
 
-    if model_type==:MACRO
-        system = Macro.load_system(case_path);
+    system = model.load_system(case_path);
 
-        system_decomp = Macro.generate_decomposed_system(system);
-    end
+    planning_problem,linking_variables = initialize_planning_problem!(system,model);
+
+    system_decomp = model.generate_decomposed_system(system);
 
     number_of_subperiods = length(system_decomp);
 
-    planning_problem,linking_variables = initialize_planning_problem(system,model_type);
+    start_distributed_processes!(number_of_subperiods,model)
 
-    start_distributed_processes!(number_of_subperiods,:MACRO)
-
-    subproblems_dict,linking_variables_sub = initialize_dist_subproblems(system_decomp,model_type)
+    subproblems_dict,linking_variables_sub = initialize_dist_subproblems(system_decomp,model)
 
     result = benders(planning_problem,linking_variables,subproblems_dict,linking_variables_sub)
     

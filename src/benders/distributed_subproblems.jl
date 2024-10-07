@@ -1,44 +1,44 @@
-function initialize_subproblem(system::Any,model_type::Symbol)
+function initialize_subproblem(system::Any,model::Module)
     
-    if model_type==:MACRO
-        subproblem,linking_variables_sub = Macro.generate_operation_subproblem(system);
-        subperiod_index = system.time_data[:Electricity].subperiod_indices[1];
-    end
-
-    set_silent(subproblem)
-
     subproblem_optimizer = optimizer_with_attributes(()->Gurobi.Optimizer(GRB_ENV[]),"Method"=>2,"BarConvTol"=>1e-3,"Crossover"=>1)
 
+    subproblem,linking_variables_sub = model.generate_operation_subproblem(system);
+
+    subperiod_index = model.get_subperiod_index(system);
+
     set_optimizer(subproblem,subproblem_optimizer)
+
+    set_silent(subproblem)
 
     return subproblem,linking_variables_sub,subperiod_index
 end
 
-function initialize_local_subproblems!(system_local::Vector,subproblems_local::Vector{Dict{Any,Any}},model_type::Symbol)
+function initialize_local_subproblems(system_local::Vector,subproblems_local::Vector{Dict{Any,Any}},model::Module)
 
     nW = length(system_local)
 
     for i=1:nW
-		subproblem,linking_variables_sub,subperiod_index = initialize_subproblem(system_local[i],model_type);
+		subproblem,linking_variables_sub,subperiod_index = initialize_subproblem(system_local[i],model);
         subproblems_local[i][:model] = subproblem;
         subproblems_local[i][:linking_variables_sub] = linking_variables_sub;
         subproblems_local[i][:subperiod_index] = subperiod_index;
     end
 end
 
-function initialize_dist_subproblems(system_decomp::Dict,model_type::Symbol)
+function initialize_dist_subproblems(system_decomp::Dict,model::Module)
 
     ##### Initialize a distributed arrays of JuMP models
 	## Start pre-solve timer
 	subproblem_generation_time = time()
-    
+
+
     subproblems_all = distribute([Dict() for i in 1:length(system_decomp)]);
 
     @sync for p in workers()
         @async @spawnat p begin
             W_local = localindices(subproblems_all)[1];
             system_local = [system_decomp[k] for k in W_local];
-            initialize_local_subproblems!(system_local,localpart(subproblems_all),model_type);
+            initialize_local_subproblems(system_local,localpart(subproblems_all),model);
         end
     end
 

@@ -1,6 +1,6 @@
 
 
-function start_distributed_processes!(number_of_subperiods::Int64,model_type::Symbol)
+function start_distributed_processes!(number_of_subperiods::Int64,model::Module)
 
     if haskey(ENV,"SLURM_NTASKS")
         ntasks = min(number_of_subperiods,parse(Int, ENV["SLURM_NTASKS"]));
@@ -15,7 +15,7 @@ function start_distributed_processes!(number_of_subperiods::Int64,model_type::Sy
     project = Pkg.project().path
 
     @sync for p in workers()
-        @async create_worker_process(p,project,model_type) # add a check
+        @async create_worker_process(p,project,model) # add a check
     end
 
     println("Number of subperiods:",number_of_subperiods)
@@ -24,16 +24,16 @@ function start_distributed_processes!(number_of_subperiods::Int64,model_type::Sy
 end
 
 
-function create_worker_process(pid,project,model_type)
+function create_worker_process(pid,project,model::Module)
 
     Distributed.remotecall_eval(Main, pid,:(using Pkg))
 
     Distributed.remotecall_eval(Main, pid,:(Pkg.activate($(project))))
-                                 
-    if model_type == :MACRO
-        Distributed.remotecall_eval(Main, pid, :(using Macro))
-    elseif model_type == :GenX
+    
+    if "$(model)" == "GenX"
         Distributed.remotecall_eval(Main, pid, :(using GenX))
+    elseif "$(model)" == "Macro"
+        Distributed.remotecall_eval(Main, pid, :(using Macro))
     end
 
     Distributed.remotecall_eval(Main, pid, :(using MacroEnergySystemsDecomposition))

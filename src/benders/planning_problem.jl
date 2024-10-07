@@ -1,11 +1,9 @@
-function initialize_planning_problem(system::Any,model_type::Symbol)
-
-    if model_type==:MACRO
-        planning_problem,linking_variables = Macro.generate_planning_problem(system);
-    end
+function initialize_planning_problem!(system::Any,model::Module)
 
     planning_optimizer = optimizer_with_attributes(()->Gurobi.Optimizer(GRB_ENV[]),"Method"=>2,"BarConvTol"=>1e-3,"Crossover"=>0,"MIPGap"=>1e-3)
-
+    
+    planning_problem,linking_variables = model.generate_planning_problem(system);
+    
     set_optimizer(planning_problem,planning_optimizer)
 
     set_silent(planning_problem)
