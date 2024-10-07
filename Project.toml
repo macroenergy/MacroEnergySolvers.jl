@@ -1,5 +1,7 @@
 name = "MacroEnergySystemsDecomposition"
-version = "0.0.1"
+uuid = "466a4f75-6c9c-4ef2-97df-f5f43ac00c23"
+authors = ["Filippo Pecci <peccifilippo@gmail.com>"]
+version = "0.1.0"
 
 [deps]
 ClusterManagers = "34f1f09b-3a8b-5176-ab39-66d58a4d544e"

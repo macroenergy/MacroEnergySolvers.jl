@@ -8,8 +8,6 @@ module MacroEnergySystemsDecomposition
     using LinearAlgebra
     using Pkg
     using Revise
-    
-    using Macro
 
     const GRB_ENV = Ref{Gurobi.Env}()
     function __init__()
