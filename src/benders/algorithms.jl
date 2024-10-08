@@ -225,7 +225,12 @@ function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,
 	println(k)
 	W = keys(subop_sol);
 
+	# Store a dictionary holding logs for later analysis
+	logDict_perW = Dict()
+
 	if k >= 2
+		# Pass in number of times repeatedly nonbinding, and dual value for logs
+		logDict_perW["dualvals_and_repeated_nonbinding" * string(k)] = [x[2:3] for x in values(constraints_dict_tocheck_binding)]
 
 		REPEATED_NONBINDING_THRESH = 3
 		# for (con, repeated_nonbinding, dualVal) in values(constraints_dict_tocheck_binding)
@@ -256,6 +261,8 @@ function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,
                     [subop_sol_hist[j][w].op_cost for j in 1:(k-1)],
                     Ref(subop_sol_hist[k][w].op_cost))
             )
+
+            logDict_perW["cut_dist_"*string(w)] = (; min_dist_lambda, min_dist_op_cost)
 
 			TOO_CLOSE_DIST_THRESH = 0.2
             if multicut_removal_method == :similar_dist  &&
