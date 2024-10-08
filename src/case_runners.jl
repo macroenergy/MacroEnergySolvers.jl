@@ -1,10 +1,21 @@
+using Debugger
+using Serialization
 function solve_model_with_benders(case_path::String,model_type::Symbol)
+    if haskey(ENV, "DEBUGGER")
+        println("DEBUGGER, TAKING LAST SAVE OF SYSTEM")
+        cached = deserialize("debugging_cache_system.juliaSerialize")
+        system        = cached[:system]
+        system_decomp = cached[:system_decomp]
+    else
+        if model_type==:MACRO
+            system = Macro.load_system(case_path);
 
-    if model_type==:MACRO
-        system = Macro.load_system(case_path);
+            system_decomp = Macro.generate_decomposed_system(system);
 
-        system_decomp = Macro.generate_decomposed_system(system);
-    end
+		        # Serialize doesn't work across versions, ok
+		        serialize("./debugging_cache_system.juliaSerialize", (; system, system_decomp))
+        end
+	  end
 
     number_of_subperiods = length(system_decomp);
 

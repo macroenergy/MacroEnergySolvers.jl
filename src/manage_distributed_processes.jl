@@ -4,11 +4,16 @@ function start_distributed_processes!(number_of_subperiods::Int64,model_type::Sy
 
     if haskey(ENV,"SLURM_NTASKS")
         ntasks = min(number_of_subperiods,parse(Int, ENV["SLURM_NTASKS"]));
-        cpus_per_task = parse(Int, ENV["SLURM_CPUS_PER_TASK"]);
+        if haskey(ENV, "SLURM_CPUS_PER_TASK")
+            cpus_per_task = parse(Int, ENV["SLURM_CPUS_PER_TASK"]);
+        else
+            cpus_per_task = 1
+        end
         addprocs(ClusterManagers.SlurmManager(ntasks);exeflags=["-t $cpus_per_task"])
     else
         ntasks = min(number_of_subperiods,Sys.CPU_THREADS)
         cpus_per_task = 1;
+        # stop so all sync
         addprocs(ntasks)
     end
 

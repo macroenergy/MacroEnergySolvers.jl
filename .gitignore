@@ -37,3 +37,8 @@ Manifest.toml
 *.vsix
 # pre-commit hooks
 .pre-commit-config.yaml
+
+julia-*.out
+debugging_cache_system.juliaSerialize
+example_systems/three_zone_tiny
+settings.json
