@@ -12,6 +12,6 @@ using Macro
 using LinearAlgebra
 
 # solve_model_monolithic(case_path,:MACRO)
-result = solve_model_with_benders(case_path,:MACRO)
+result = solve_model_with_benders(case_path,Macro)
 
 println()
