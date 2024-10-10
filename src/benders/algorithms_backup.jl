@@ -17,10 +17,8 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	γ = 0.5;
 	stab_method ="int_level_set";
     integer_investment = false;
-	stab_dynamic = false; #dynamic or fixed 
-	cut_selection_method = "no";
-	filter_planning_sol = true;
-	filter_cuts = true;
+	stab_dynamic = true; #dynamic or fixed 
+	cut_selection_method = "norm";
 	#############	
 
 	integer_routine_flag = false
@@ -54,13 +52,6 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		start_subop_sol = time();
 
         subop_sol = solve_dist_subproblems(subproblems,planning_sol);
-
-		if filter_cuts == true
-			# for w in keys(subop_sol)
-				# println(typeof(subop_sol), w)
-				filter_cuts!(subop_sol)
-			# end
-		end
         
 		cpu_subop_sol = time()-start_subop_sol;
 		println("Solving the subproblems required $cpu_subop_sol seconds")
@@ -175,10 +166,6 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 
 		end
 
-		if filter_planning_sol==true
-			filter_planning_sol!(planning_sol.values)
-		end
-
     end
 
 	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time, subop_sol_hist = subop_sol_hist)
@@ -192,7 +179,7 @@ function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,subop_sol_
 		if k >= 2
 			for w in W
 				avoid=false
-					for j in 1:k-1
+					for j in k-1
 						if norm(subop_sol_hist[j][w].lambda.-subop_sol_hist[k][w].lambda)/norm(subop_sol_hist[j][w].lambda) <= 0.2 && norm(subop_sol_hist[j][w].op_cost.-subop_sol_hist[k][w].op_cost)/norm(subop_sol_hist[j][w].op_cost) <= 0.2
 							println("Repeated cut for week $(w) iteration $(k)!")
 							avoid=true
@@ -221,29 +208,4 @@ function fix_linking_variables!(m::Model,planning_sol::NamedTuple,linking_variab
 			unset_binary(vy)
 		end
 	end
-end
-
-
-function filter_planning_sol!(dict::Dict{String, Float64})
-
-    for (key, value) in dict
-        if abs(value) <= exp(-6)
-            dict[key] = 0.0
-        end
-    end
-
-    return dict
-
-end
-
-
-function filter_cuts!(data::Dict{Any, Any})
-
-    for (key, value) in data
-        if haskey(value, :lambda)
-            value.lambda .= [abs(x) < exp(-6) ? 0.0 : x for x in value.lambda]
-        end
-    end
-
-    return data
 end
