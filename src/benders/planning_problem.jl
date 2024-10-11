@@ -1,6 +1,6 @@
 function initialize_planning_problem!(system::Any,model::Module)
 
-    planning_optimizer = optimizer_with_attributes(()->Gurobi.Optimizer(GRB_ENV[]),"Method"=>2,"BarConvTol"=>1e-3,"Crossover"=>0,"MIPGap"=>1e-3)
+    planning_optimizer = optimizer_with_attributes(()->Gurobi.Optimizer(GRB_ENV[]),"Method"=>2,"BarConvTol"=>1e-3,"Crossover"=>1,"MIPGap"=>1e-3)
     
     planning_problem,linking_variables = model.generate_planning_problem(system);
     
