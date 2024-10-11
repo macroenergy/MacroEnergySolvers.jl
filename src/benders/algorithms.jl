@@ -37,6 +37,8 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
     #### Initialize UB and LB
 	planning_sol = solve_planning_problem(planning_problem,linking_variables);
 
+	println(planning_sol)
+
     UB = Inf;
     LB = planning_sol.LB;
 
