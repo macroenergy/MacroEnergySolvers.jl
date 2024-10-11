@@ -101,7 +101,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 		# 			end
 		# 		end
         #         display(list_of_conflicting_constraints)
-		@warn "The subproblem solution failed. This should not happen, double check the input files"
+		@warn "The subproblem solution failed. TerminationStatus: $(termination_status(m)), This should not happen, double check the input files"
 	end
     
 	return (op_cost=op_cost,lambda = lambda,theta_coeff=theta_coeff)
