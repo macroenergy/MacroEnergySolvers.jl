@@ -180,7 +180,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		if filter_planning_sol==true
 			filter_planning_sol!(planning_sol.values)
 		end
-		println(planning_sol)
+		# println(planning_sol)
 
     end
 
