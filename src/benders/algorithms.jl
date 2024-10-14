@@ -17,8 +17,8 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	γ = 0.5;
 	stab_method ="int_level_set";
     integer_investment = false;
-	stab_dynamic = true; #dynamic or fixed 
-	cut_selection_method = "norm";
+	stab_dynamic = false; #dynamic or fixed 
+	cut_selection_method = "nor";
 	filter_planning_sol = true;
 	filter_cuts = true;
 	#############	
@@ -36,8 +36,6 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 
     #### Initialize UB and LB
 	planning_sol = solve_planning_problem(planning_problem,linking_variables);
-
-	println(planning_sol)
 
     UB = Inf;
     LB = planning_sol.LB;
@@ -180,7 +178,6 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		if filter_planning_sol==true
 			filter_planning_sol!(planning_sol.values)
 		end
-		# println(planning_sol)
 
     end
 
