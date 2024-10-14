@@ -18,7 +18,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	stab_method ="int_level_set";
     integer_investment = false;
 	stab_dynamic = false; #dynamic or fixed 
-	cut_selection_method = "nor";
+	cut_selection_method = "norm";
 	filter_planning_sol = true;
 	filter_cuts = true;
 	#############	
