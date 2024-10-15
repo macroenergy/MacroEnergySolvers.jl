@@ -121,7 +121,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		elseif UB==Inf
 			planning_sol = deepcopy(unst_planning_sol);
 		else
-			if stab_method == "int_level_set"
+			if stab_method == "int_level_set" && (UB-LB)/abs(LB) > 0.01
 
 				if stab_dynamic == true
 					if k >= 2
