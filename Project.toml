@@ -9,3 +9,11 @@ Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 DistributedArrays = "aaf54ef3-cdf8-58ed-94cc-d582ad619b94"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[compat]
+ClusterManagers = "2.0.0"
+Distributed = "1.10, 1.11"
+DistributedArrays = "0.6.7"
+julia = "1"
+JuMP = "1.25.0"
+Pkg = "1.10 - 1"
