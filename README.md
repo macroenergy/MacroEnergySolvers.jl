@@ -6,7 +6,7 @@ Currently, the repository includes the regularized Benders decomposition algorit
 
 _F. Pecci and J. D. Jenkins (2025), "Regularized Benders Decomposition for High Performance Capacity Expansion Models," in IEEE Transactions on Power Systems, doi: [10.1109/TPWRS.2025.3526413](https://ieeexplore.ieee.org/document/10829583)_.
 
-Other algorithms are possible and could be added in the future (e.g., Dual Dynamic Programming). If you would like to develop a decomposition method for macro-energy system models, we welcome any contributions.
+Other algorithms are possible and could be added in the future (e.g., [Nested Benders Decomposition](https://www.sciencedirect.com/science/article/abs/pii/S0377221718304466)). If you would like to develop a decomposition method for macro-energy system models, please open a pull request or get in touch with us, we welcome any contributions.
 
 In the case of Benders decomposition, the user must generate the inputs for function `benders(planning_problem,linking_variables,subproblems,linking_variables_sub,setup)` where:
 
