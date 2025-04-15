@@ -1,4 +1,42 @@
+"""
+	benders(planning_problem::Model, 
+		linking_variables::Vector{String}, 
+		subproblems::Union{Vector{Dict{Any, Any}}, DistributedArrays.DArray}, 
+		linking_variables_sub::Dict, 
+		setup::Dict
+	)
 
+Implements a regularized Benders decomposition algorithm for solving large-scale energy systems planning problems.
+
+## Algorithm from:
+F. Pecci and J. D. Jenkins (2025). “Regularized Benders Decomposition for High Performance Capacity Expansion Models”. doi: [10.1109/TPWRS.2025.3526413](https://ieeexplore.ieee.org/document/10829583)
+
+It's a regularized version of the Benders decomposition algorithm in:
+
+A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” doi: [https://doi.org/10.1287/ijoo.2023.0005](https://doi.org/10.1287/ijoo.2023.0005)
+
+# Arguments
+- `planning_problem::Model`: The master problem JuMP model representing the investment decisions
+- `linking_variables::Vector{String}`: Names of the variables linking the master and subproblems
+- `subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray}`: Collection of operational subproblems
+- `linking_variables_sub::Dict`: Mapping between subproblems and their associated linking variables
+- `setup::Dict`: Algorithm parameters including:
+	- `MaxIter`: Maximum number of iterations
+	- `ConvTol`: Convergence tolerance
+	- `MaxCpuTime`: Maximum CPU time allowed
+	- `StabParam`: Stabilization parameter γ
+	- `StabDynamic`: Boolean for dynamic stabilization adjustment
+	- `IntegerInvestment`: Boolean for integer investment variables
+
+# Returns
+@NamedTuple containing:
+- `planning_problem`: Updated master problem model
+- `planning_sol`: Best solution found
+- `LB_hist`: History of lower bounds
+- `UB_hist`: History of upper bounds
+- `cpu_time`: CPU time history
+- `sol_hist`: Solution history for linking variables
+"""
 function benders(planning_problem::Model,linking_variables::Vector{String},subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray},linking_variables_sub::Dict,setup::Dict)
 	
     #### Algorithm from:
