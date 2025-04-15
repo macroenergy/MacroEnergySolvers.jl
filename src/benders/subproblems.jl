@@ -27,7 +27,9 @@ end
 
 
 function add_slacks_to_subproblem!(subproblem::Model,slack_penalty_value::Union{Float64,Nothing}=nothing)
-    
+    ### Slack variables are added to the subproblems and fixed to zero if slack_penalty_value is not set. 
+    ### We will then allow slack variables to be non-zero to generate feasibility cuts when a subproblem is infeasible.
+
     eq_cons =  all_constraints(subproblem,AffExpr,MOI.EqualTo{Float64})
     less_ineq_cons = all_constraints(subproblem,AffExpr,MOI.LessThan{Float64})
     greater_ineq_cons = all_constraints(subproblem,AffExpr,MOI.GreaterThan{Float64})
@@ -58,8 +60,9 @@ function add_slacks_to_subproblem!(subproblem::Model,slack_penalty_value::Union{
         @constraint(subproblem, [i in 1:n], -slack_eq[i] <= slack_max)
     end
 
+    #### Note: if slack_penalty_value is not set, then the slack variables are fixed to zero
     if isnothing(slack_penalty_value)
-        fix.(slack_max,0.0); #Note: no need to have force=true because the slacks do not have variable bounds
+        fix.(slack_max,0.0); 
     else
         set_objective_coefficient(subproblem, slack_max, slack_penalty_value);
     end
@@ -69,7 +72,7 @@ function add_slacks_to_subproblem!(subproblem::Model,slack_penalty_value::Union{
 end
 
 function fix_linking_variables!(m::Model,planning_sol::NamedTuple,linking_variables_sub::Vector{String})
-
+    ### Fix linking variables in the subproblem to the values computed by the planning problem. 
 	for y in linking_variables_sub
 		vy = variable_by_name(m,y);
 		fix(vy,planning_sol.values[y];force=true)
@@ -82,8 +85,9 @@ function fix_linking_variables!(m::Model,planning_sol::NamedTuple,linking_variab
 end
 
 function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_sub::Vector{String})
-
 	
+    ### Solve the operational subproblem. If it is infeasible, compute feasibility cuts.
+
 	fix_linking_variables!(m,planning_sol,linking_variables_sub)
 
 	optimize!(m)
@@ -94,18 +98,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 		theta_coeff = 1;	
 	else
         @info "Subproblem is infeasible, generating feasibility cut..."
-        # if !has_values(m)
-        #     compute_conflict!(m)
-        #     list_of_conflicting_constraints = ConstraintRef[];
-        #     for (F, S) in list_of_constraint_types(m)
-        #         for con in all_constraints(m, F, S)
-        #             if get_attribute(con, MOI.ConstraintConflictStatus()) == MOI.IN_CONFLICT
-        #                 push!(list_of_conflicting_constraints, con)
-        #             end
-        #         end
-        #     end
-        #     display(list_of_conflicting_constraints)
-        # end
+        #### Feasibility cuts generation based on https://link.springer.com/chapter/10.1007/978-3-030-45771-6_7 
         
         unfix.(m[:slack_max]);
         objfun = objective_function(m);
@@ -123,6 +116,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
                 end
             end
             display(list_of_conflicting_constraints)
+            @error "Feasibility subproblem is infeasible, this should not happen. Check the model."
         end
         op_cost = objective_value(m);
         lambda = [dual(FixRef(variable_by_name(m,y))) for y in linking_variables_sub];
@@ -131,10 +125,6 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
         fix.(m[:slack_max],0.0);
 
         @objective(m, Min, objfun)
-
-		# op_cost = 0;
-		# lambda = zeros(length(linking_variables_sub));
-		# theta_coeff = 0;
 
 	end
     

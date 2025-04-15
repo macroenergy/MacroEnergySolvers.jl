@@ -1,5 +1,7 @@
 function solve_int_level_set_problem(m::Model,linking_variables::Vector{String},planning_sol::NamedTuple,LB,UB,γ)
 	
+	### Interior point regularization based on https://ieeexplore.ieee.org/document/10829583
+
 	@constraint(m,cLevel_set,m[:eFixedCost] + m[:eApproximateVariableCost]<=LB+γ*(UB-LB))
 
 	@objective(m,Min, 0*m[:eApproximateVariableCost])
@@ -7,11 +9,11 @@ function solve_int_level_set_problem(m::Model,linking_variables::Vector{String},
     optimize!(m)
 
 	if has_values(m)
-		if check_negative_capacity(m)
-			@warn  "skipping regularization because of negative capacities"
-		else
-			planning_sol = (;planning_sol..., fixed_cost=value(m[:eFixedCost]), values=Dict([s=>value(variable_by_name(m,s)) for s in linking_variables]), theta = value.(m[:vTHETA]))
-		end
+
+		fixed_cost,variable_values = process_planning_sol(m,linking_variables)
+
+		planning_sol = (;planning_sol..., fixed_cost = fixed_cost, values = variable_values)
+		
 	else
 		
 		@warn  "the interior level set problem solution failed"

@@ -4,25 +4,8 @@ function solve_planning_problem(m::Model,linking_variables::Vector{String})
     optimize!(m)
 
     if has_values(m)
-        
-        # values = Dict([s=>round_small_values(value(variable_by_name(m,s))) for s in linking_variables])
-        # point = Dict(variable_by_name(m,s) => values[s] for s in linking_variables)
-        # @show (values)
-        # @show (point)
-        # fixed_cost = value(x->point[x], m[:eFixedCost])
-        # planning_sol =  (LB = objective_value(m), fixed_cost = fixed_cost, values = values) 
-
-        if check_negative_capacity(m)
-            @info "Resolving the planning problem with Crossover = 1 because of negative capacities"
-            set_optimizer_attribute(m, "Crossover", 1)
-            optimize!(m)
-            if has_values(m)
-                planning_sol =  (LB = objective_value(m), fixed_cost =value(m[:eFixedCost]), values =Dict([s=>value.(variable_by_name(m,s)) for s in linking_variables]), theta = value.(m[:vTHETA])) 
-            end
-            set_optimizer_attribute(m, "Crossover", 0)
-        else
-            planning_sol =  (LB = objective_value(m), fixed_cost =value(m[:eFixedCost]), values =Dict([s=>value.(variable_by_name(m,s)) for s in linking_variables]), theta = value.(m[:vTHETA])) 
-        end
+        fixed_cost, linking_variables_values = process_planning_sol(m::Model,linking_variables::Vector{String})
+        planning_sol =  (LB = objective_value(m), fixed_cost = fixed_cost, values = linking_variables_values)
     else
         compute_conflict!(m)
         list_of_conflicting_constraints = ConstraintRef[];
@@ -34,19 +17,41 @@ function solve_planning_problem(m::Model,linking_variables::Vector{String})
             end
         end
         display(list_of_conflicting_constraints)
-        @error "The planning solution failed. This should not happen"
+        @error "The planning solution failed. This should not happen."
     end
 
     return planning_sol
 end
 
 
-function check_negative_capacity(m::Model)
-    return any(value(m[:eAvailableCapacity][y]) < -1e-8 for y in keys(m[:eAvailableCapacity]))
+function process_planning_sol(m::Model,linking_variables::Vector{String})
+
+    capacity_variables = values(m[:eAvailableCapacity])
+
+    if any(value(vcap) < -1e-8 for vcap in capacity_variables)
+        @info "Found negative capacity values, setting them to zero."
+        planning_variables_values = Dict();
+        all_planning_variables = all_variables(m)
+        for v in all_planning_variables
+            if in(v,capacity_variables)
+                planning_variables_values[v] = round_small_values(value(v))
+            else
+                planning_variables_values[v] = value(v)
+            end
+        end
+        fixed_cost = value(x->planning_variables_values[x], m[:eFixedCost])
+        linking_variables_values = Dict([s => planning_variables_values[variable_by_name(m,s)] for s in linking_variables])
+    else
+        fixed_cost = value(m[:eFixedCost])
+        linking_variables_values = Dict([s=>value.(variable_by_name(m,s)) for s in linking_variables])
+    end
+
+    return fixed_cost, linking_variables_values
+    
 end
 
 function round_small_values(z::Float64)
-    if abs(z) < 1e-6
+    if z < -1e-8
         return 0.0
     else
         return z

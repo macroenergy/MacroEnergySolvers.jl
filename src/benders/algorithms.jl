@@ -2,11 +2,10 @@
 function benders(planning_problem::Model,linking_variables::Vector{String},subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray},linking_variables_sub::Dict,setup::Dict)
 	
     #### Algorithm from:
-    ### Pecci, F. and Jenkins, J. D. “Regularized Benders Decomposition for High Performance Capacity Expansion Models”. arXiv:2403.02559 [math]. URL: http://arxiv.org/abs/2403.02559.
+    ### F. Pecci and J. D. Jenkins (2025). “Regularized Benders Decomposition for High Performance Capacity Expansion Models”. doi: https://doi.org/10.1109/TPWRS.2025.3526413
 
 	### It's a regularized version of the Benders decomposition algorithm in:
-	### A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins, “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” INFORMS Journal on Optimization 6(1):32-45. doi: https://doi.org/10.1287/ijoo.2023.0005
-
+	### A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” doi: https://doi.org/10.1287/ijoo.2023.0005
 
 	add_slacks_to_subproblems!(subproblems);
 
@@ -66,7 +65,6 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		cpu_subop_sol = time()-start_subop_sol;
 		println("Solving the subproblems required $cpu_subop_sol seconds")
 
-		## UBnew = sum((subop_sol[w].theta_coeff==0 ? Inf : subop_sol[w].op_cost) for w in keys(subop_sol))+planning_sol.inv_cost;
 		UBnew = compute_upper_bound(planning_problem,planning_sol,subop_sol);
 		if UBnew < UB
 			planning_sol_best = deepcopy(planning_sol);
