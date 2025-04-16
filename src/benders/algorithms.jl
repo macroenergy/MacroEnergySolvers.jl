@@ -135,13 +135,15 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
         append!(UB_hist,UB)
         append!(cpu_time,time()-solver_start_time)
 
+		running_gap = (UB-LB)/abs(LB)
+
 		if any(subop_sol[w].theta_coeff==0 for w in keys(subop_sol))
-			@info(string("***k = ", k,"      LB = ", LB,"     UB = ", UB,"       Gap = ", (UB-LB)/abs(LB),"       CPU Time = ",cpu_time[end]))
+			@info(string("***k = ", k,"      LB = ", round_from_tol(LB, ConvTol, 2),"     UB = ", round_from_tol(UB, ConvTol, 2),"       Gap = ", round_from_tol(running_gap, ConvTol, 2),"       CPU Time = ", round(cpu_time[end], digits=5)))
 		else
-			@info(string("k = ", k,"      LB = ", LB,"     UB = ", UB,"       Gap = ", (UB-LB)/abs(LB),"       CPU Time = ",cpu_time[end]))
+			@info(string("k = ", k,"      LB = ", round_from_tol(LB, ConvTol, 2),"     UB = ", round_from_tol(UB, ConvTol, 2),"       Gap = ", round_from_tol(running_gap, ConvTol, 2),"       CPU Time = ", round(cpu_time[end], digits=5)))
 		end
 
-        if (UB-LB)/abs(LB) <= ConvTol
+        if running_gap <= ConvTol
 			if integer_routine_flag
 				@info("*** Switching on integer constraints *** ")
 				UB = Inf;
