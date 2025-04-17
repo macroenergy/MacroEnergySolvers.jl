@@ -1,3 +1,27 @@
+"""
+    solve_planning_problem(m::Model, linking_variables::Vector{String})
+
+Solves the planning (master) problem in the Benders decomposition algorithm.
+
+This function attempts to solve the planning problem and handles potential numerical issues,
+particularly with negative capacities, by re-solving with different solver settings if needed.
+
+# Arguments
+- `m::Model`: The JuMP model representing the planning problem
+- `linking_variables::Vector{String}`: Names of the variables linking the master and subproblems
+
+# Returns
+A NamedTuple containing:
+- `LB`: Lower bound (objective value) of the planning problem
+- `fixed_cost`: Fixed cost component of the solution
+- `values`: Dictionary mapping linking variable names to their optimal values
+- `theta`: Values of the theta variables representing subproblem costs
+
+# Notes
+If negative capacities are detected, the solver will be reconfigured with `Crossover = 1` 
+and the problem will be re-solved. If the solution fails, the function will compute
+and display conflicting constraints (if the solver supports it) before throwing an error.
+"""
 function solve_planning_problem(m::Model,linking_variables::Vector{String})
 	
 	

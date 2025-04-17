@@ -1,4 +1,42 @@
+"""
+	benders(planning_problem::Model, 
+		linking_variables::Vector{String}, 
+		subproblems::Union{Vector{Dict{Any, Any}}, DistributedArrays.DArray}, 
+		linking_variables_sub::Dict, 
+		setup::Dict
+	)
 
+Implements a regularized Benders decomposition algorithm for solving large-scale energy systems planning problems.
+
+## Algorithm from:
+F. Pecci and J. D. Jenkins (2025). “Regularized Benders Decomposition for High Performance Capacity Expansion Models”. doi: [10.1109/TPWRS.2025.3526413](https://ieeexplore.ieee.org/document/10829583)
+
+It's a regularized version of the Benders decomposition algorithm in:
+
+A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” doi: [https://doi.org/10.1287/ijoo.2023.0005](https://doi.org/10.1287/ijoo.2023.0005)
+
+# Arguments
+- `planning_problem::Model`: The master problem JuMP model representing the investment decisions
+- `linking_variables::Vector{String}`: Names of the variables linking the master and subproblems
+- `subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray}`: Collection of operational subproblems
+- `linking_variables_sub::Dict`: Mapping between subproblems and their associated linking variables
+- `setup::Dict`: Algorithm parameters including:
+	- `MaxIter`: Maximum number of iterations
+	- `ConvTol`: Convergence tolerance
+	- `MaxCpuTime`: Maximum CPU time allowed
+	- `StabParam`: Stabilization parameter γ
+	- `StabDynamic`: Boolean for dynamic stabilization adjustment
+	- `IntegerInvestment`: Boolean for integer investment variables
+
+# Returns
+@NamedTuple containing:
+- `planning_problem`: Updated master problem model
+- `planning_sol`: Best solution found
+- `LB_hist`: History of lower bounds
+- `UB_hist`: History of upper bounds
+- `cpu_time`: CPU time history
+- `sol_hist`: Solution history for linking variables
+"""
 function benders(planning_problem::Model,linking_variables::Vector{String},subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray},linking_variables_sub::Dict,setup::Dict)
 	
     #### Algorithm from:
@@ -7,6 +45,10 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	### It's a regularized version of the Benders decomposition algorithm in:
 	### A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” doi: https://doi.org/10.1287/ijoo.2023.0005
 
+	# Initialize the MacroEnergySolvers logger
+	old_logger = set_logger(Logging.Info)
+	@info("Running Benders decomposition algorithm from `MacroEnergySolvers.jl`")
+	
 	add_slacks_to_subproblems!(subproblems);
 
 	## Start solver time
@@ -63,7 +105,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
         subop_sol = solve_subproblems(subproblems,planning_sol);
         
 		cpu_subop_sol = time()-start_subop_sol;
-		println("Solving the subproblems required $cpu_subop_sol seconds")
+		@info("Solving the subproblems required $cpu_subop_sol seconds")
 
 		UBnew = compute_upper_bound(planning_problem,planning_sol,subop_sol);
 		if UBnew < UB
@@ -84,24 +126,26 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		unst_planning_sol = solve_planning_problem(planning_problem,linking_variables);
 
 		cpu_planning_sol = time()-start_planning_sol;
-		println("Solving the planning problem required $cpu_planning_sol seconds")
+		@info("Solving the planning problem required $cpu_planning_sol seconds")
 
 		LB = max(LB,unst_planning_sol.LB);
-		println("The optimal value of the planning problem is $(unst_planning_sol.LB)")
+		@info("The optimal value of the planning problem is $(unst_planning_sol.LB)")
 		
 		append!(LB_hist,LB)
         append!(UB_hist,UB)
         append!(cpu_time,time()-solver_start_time)
 
+		running_gap = (UB-LB)/abs(LB)
+
 		if any(subop_sol[w].theta_coeff==0 for w in keys(subop_sol))
-			println("***k = ", k,"      LB = ", LB,"     UB = ", UB,"       Gap = ", (UB-LB)/abs(LB),"       CPU Time = ",cpu_time[end])
+			@info(string("***k = ", k,"      LB = ", round_from_tol(LB, ConvTol, 2),"     UB = ", round_from_tol(UB, ConvTol, 2),"       Gap = ", round_from_tol(running_gap, ConvTol, 2),"       CPU Time = ", round(cpu_time[end], digits=5)))
 		else
-			println("k = ", k,"      LB = ", LB,"     UB = ", UB,"       Gap = ", (UB-LB)/abs(LB),"       CPU Time = ",cpu_time[end])
+			@info(string("k = ", k,"      LB = ", round_from_tol(LB, ConvTol, 2),"     UB = ", round_from_tol(UB, ConvTol, 2),"       Gap = ", round_from_tol(running_gap, ConvTol, 2),"       CPU Time = ", round(cpu_time[end], digits=5)))
 		end
 
-        if (UB-LB)/abs(LB) <= ConvTol
+        if running_gap <= ConvTol
 			if integer_routine_flag
-				println("*** Switching on integer constraints *** ")
+				@info("*** Switching on integer constraints *** ")
 				UB = Inf;
 				set_integer.(integer_variables)
 				set_binary.(binary_variables)
@@ -132,7 +176,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 					for v in binary_variables
 						fix(v,unst_planning_sol.values[name(v)];force=true)
 					end
-                    println("Solving the interior level set problem with γ = $γ")
+                    @info("Solving the interior level set problem with γ = $γ")
 					planning_sol = solve_int_level_set_problem(planning_problem,linking_variables,unst_planning_sol,LB,UB,γ);
 					unfix.(integer_variables)
 					unfix.(binary_variables)
@@ -141,11 +185,11 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 					set_lower_bound.(integer_variables,0.0)
 					set_lower_bound.(binary_variables,0.0)
 				else
-                    println("Solving the interior level set problem with γ = $γ")
+                    @info("Solving the interior level set problem with γ = $γ")
 					planning_sol = solve_int_level_set_problem(planning_problem,linking_variables,unst_planning_sol,LB,UB,γ);
 				end
 				cpu_stab_method = time()-start_stab_method;
-				println("Solving the interior level set problem required $cpu_stab_method seconds")
+				@info("Solving the interior level set problem required $cpu_stab_method seconds")
 			else
 				planning_sol = deepcopy(unst_planning_sol);
 			end
@@ -154,6 +198,9 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 
     end
 
+	# Restore the old logger
+	set_logger(old_logger)
+	
 	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time,sol_hist = sol_hist)
 end
 
@@ -171,17 +218,17 @@ function update_stab_param(γ,UB,LB,UB_old,LB_old)
 					
 	ap=(UB_old-UB)
 	pp=(UB_old-(LB+γ*(UB_old-LB)))
-	println(r, ap, pp)
+	@info(r, ap, pp)
 	if ap>=0 && pp>=0
 		if r<=0.2
 			γ=0.9-0.5*(0.9-γ)
-			println("Increase γ: ", γ)
+			@info("Increase γ: ", γ)
 		elseif 0.2<r<0.8
 			γ=γ
-			println("Keep γ: ", γ)
+			@info("Keep γ: ", γ)
 		else
 			γ=0.5*γ
-			println("Decrease γ: ", γ)
+			@info("Decrease γ: ", γ)
 		end
 	end
 	

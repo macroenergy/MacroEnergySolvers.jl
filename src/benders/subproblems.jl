@@ -145,7 +145,34 @@ function solve_local_subproblems(subproblem_local::Vector{Dict{Any,Any}},plannin
     return local_sol
 end
 
+"""
+    solve_subproblems(
+        m_subproblems::DArray{Dict{Any, Any}, 1, Vector{Dict{Any, Any}}}, 
+        planning_sol::NamedTuple
+    )
 
+Solves subproblems in parallel using distributed computing capabilities.
+
+This function coordinates the parallel solution of operational subproblems across multiple workers,
+using Julia's distributed computing framework. Each worker processes its local portion of the
+distributed array of subproblems.
+
+# Arguments
+- `m_subproblems::DArray`: Distributed array containing the subproblems, where each element is a
+   dictionary representing a subproblem
+- `planning_sol::NamedTuple`: Current solution of the planning problem containing variable values
+   needed for the subproblem solutions
+
+# Returns
+A merged dictionary containing results from all subproblems, where each entry contains:
+- Optimal objective value
+- Dual variables
+- Other solution information from each subproblem
+
+# Implementation Details
+Uses `@sync` and `@async` for coordinated parallel execution, with results fetched from each worker
+and merged into a single dictionary containing all subproblem solutions.
+"""
 function solve_subproblems(m_subproblems::DArray{Dict{Any, Any}, 1, Vector{Dict{Any, Any}}},planning_sol::NamedTuple)
 
     p_id = workers();
