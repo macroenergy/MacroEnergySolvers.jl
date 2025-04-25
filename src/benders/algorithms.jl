@@ -92,6 +92,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
     cpu_time = Float64[];
 
 	planning_sol_best = deepcopy(planning_sol);
+	subop_sol = Dict{Any,Any}()
 
 	sol_hist = [planning_sol.values[s] for s in linking_variables];
 
@@ -201,7 +202,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	# Restore the old logger
 	set_logger(old_logger)
 	
-	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time,sol_hist = sol_hist)
+	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time,sol_hist = sol_hist, subop_sol = subop_sol)
 end
 
 function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,planning_sol::NamedTuple,linking_variables_sub::Dict)
