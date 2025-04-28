@@ -16,9 +16,9 @@ It's a regularized version of the Benders decomposition algorithm in:
 A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” doi: [https://doi.org/10.1287/ijoo.2023.0005](https://doi.org/10.1287/ijoo.2023.0005)
 
 # Arguments
-- `planning_problem::Model`: The master problem JuMP model representing the investment decisions
-- `linking_variables::Vector{String}`: Names of the variables linking the master and subproblems
-- `subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray}`: Collection of operational subproblems
+- `planning_problem::Model`: The upper-level problem JuMP model representing the planning decisions (e.g., investment decisions, policy budgeting variables, multi-day storage states).
+- `linking_variables::Vector{String}`: Names of the variables linking upper-level problem and all lower-level subproblems
+- `subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray}`: Collection of lower-level subproblems (i.e., the operational problems for each sub-period)
 - `linking_variables_sub::Dict`: Mapping between subproblems and their associated linking variables
 - `setup::Dict`: Algorithm parameters including:
 	- `MaxIter`: Maximum number of iterations
@@ -30,12 +30,13 @@ A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computat
 
 # Returns
 @NamedTuple containing:
-- `planning_problem`: Updated master problem model
-- `planning_sol`: Best solution found
+- `planning_problem`: Updated upper-level problem model
+- `planning_sol`: Best planning solution found
+- `subop_sol`: Subproblem solutions corresponding to the best planning solution
 - `LB_hist`: History of lower bounds
 - `UB_hist`: History of upper bounds
 - `cpu_time`: CPU time history
-- `sol_hist`: Solution history for linking variables
+- `planning_sol_hist`: Solution history for linking variables
 """
 function benders(planning_problem::Model,linking_variables::Vector{String},subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray},linking_variables_sub::Dict,setup::Dict)
 	
@@ -92,16 +93,16 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
     cpu_time = Float64[];
 
 	planning_sol_best = deepcopy(planning_sol);
-	subop_sol = Dict{Any,Any}()
+	subop_sol_best = Dict{Any,Any}()
 
-	sol_hist = [planning_sol.values[s] for s in linking_variables];
+	planning_sol_hist = [planning_sol.values[s] for s in linking_variables];
 
     #### Run Benders iterations
     for k = 0:MaxIter
 		
 		start_subop_sol = time();
 
-		sol_hist = hcat(sol_hist, [planning_sol.values[s] for s in linking_variables])
+		planning_sol_hist = hcat(planning_sol_hist, [planning_sol.values[s] for s in linking_variables])
 		
         subop_sol = solve_subproblems(subproblems,planning_sol);
         
@@ -111,6 +112,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		UBnew = compute_upper_bound(planning_problem,planning_sol,subop_sol);
 		if UBnew < UB
 			planning_sol_best = deepcopy(planning_sol);
+			subop_sol_best = deepcopy(subop_sol);
 			UB = UBnew;
 		end
 
@@ -202,7 +204,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	# Restore the old logger
 	set_logger(old_logger)
 	
-	return (planning_problem=planning_problem,planning_sol = planning_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time,sol_hist = sol_hist, subop_sol = subop_sol)
+	return (planning_problem=planning_problem,planning_sol = planning_sol_best, subop_sol = subop_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time, planning_sol_hist = planning_sol_hist)
 end
 
 function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,planning_sol::NamedTuple,linking_variables_sub::Dict)

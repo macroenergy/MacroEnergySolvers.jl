@@ -9,13 +9,13 @@
 
 Solves the interior level set stabilization problem for the regularized Benders decomposition algorithm.
 
-This stabilization technique helps improve convergence by restricting the master problem solution
+This stabilization technique helps improve convergence by restricting the upper-level problem solution
 to lie within a level set defined by the current lower and upper bounds, controlled by the
 stabilization parameter γ.
 
 # Arguments
 - `m::Model`: The JuMP model representing the planning problem
-- `linking_variables::Vector{String}`: Names of the variables linking the master and subproblems
+- `linking_variables::Vector{String}`: Names of the variables linking the upper-level and lower-level subproblems
 - `planning_sol::NamedTuple`: Current solution of the planning problem
 - `LB`: Current lower bound
 - `UB`: Current upper bound
