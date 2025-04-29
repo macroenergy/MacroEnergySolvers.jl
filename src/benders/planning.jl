@@ -80,29 +80,3 @@ function round_small_values(z::Float64)
         return z
     end
 end
-
-function prepare_planning_problem_for_output!(m::Model, planning_sol::NamedTuple)
-    # Prepare the planning problem for output by fixing the linking variables to their optimal values
-    for y in keys(planning_sol.values)
-		vy = variable_by_name(m,y);
-		fix(vy,planning_sol.values[y];force=true)
-		if is_integer(vy)
-			unset_integer(vy)
-		elseif is_binary(vy)
-			unset_binary(vy)
-		end
-	end
-    optimize!(m)
-    compute_conflict!(m)
-    list_of_conflicting_constraints = ConstraintRef[];
-    for (F, S) in list_of_constraint_types(m)
-        for con in all_constraints(m, F, S)
-            if get_attribute(con, MOI.ConstraintConflictStatus()) == MOI.IN_CONFLICT
-                push!(list_of_conflicting_constraints, con)
-            end
-        end
-    end
-    display(list_of_conflicting_constraints)
-    @assert planning_sol.fixed_cost == value(m[:eFixedCost])
-    
-end

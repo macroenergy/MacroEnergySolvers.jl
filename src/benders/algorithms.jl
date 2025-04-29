@@ -155,7 +155,6 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 				planning_sol = solve_planning_problem(planning_problem,linking_variables);
 				LB = planning_sol.LB;
 				planning_sol_best = deepcopy(planning_sol);
-				subop_sol_best = deepcopy(subop_sol);
 				integer_routine_flag = false;
 			else
 				break
@@ -201,14 +200,10 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 		end
 
     end
-	@info("The algorithm terminated. Now preparing the planning problem for output.")
-	prepare_planning_problem_for_output!(planning_problem, planning_sol_best)
 
 	# Restore the old logger
 	set_logger(old_logger)
 	
-	
-
 	return (planning_problem=planning_problem,planning_sol = planning_sol_best, subop_sol = subop_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time, planning_sol_hist = planning_sol_hist)
 end
 
