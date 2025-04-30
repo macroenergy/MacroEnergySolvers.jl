@@ -1,6 +1,6 @@
 """
     solve_int_level_set_problem(m::Model, 
-		linking_variables::Vector{String}, 
+		planning_variables::Vector{String}, 
 		planning_sol::NamedTuple, 
 		LB, 
 		UB, 
@@ -15,7 +15,7 @@ stabilization parameter γ.
 
 # Arguments
 - `m::Model`: The JuMP model representing the planning problem
-- `linking_variables::Vector{String}`: Names of the variables linking the upper-level and lower-level subproblems
+- `planning_variables::Vector{String}`: Names of the variables of the planning problem
 - `planning_sol::NamedTuple`: Current solution of the planning problem
 - `LB`: Current lower bound
 - `UB`: Current upper bound
@@ -25,7 +25,7 @@ stabilization parameter γ.
 A NamedTuple containing the solution of the stabilized problem with the same structure as the input `planning_sol`
 
 """
-function solve_int_level_set_problem(m::Model,linking_variables::Vector{String},planning_sol::NamedTuple,LB,UB,γ)
+function solve_int_level_set_problem(m::Model,planning_variables::Vector{String},planning_sol::NamedTuple,LB,UB,γ)
 	
 	### Interior point regularization based on https://ieeexplore.ieee.org/document/10829583
 
@@ -37,7 +37,7 @@ function solve_int_level_set_problem(m::Model,linking_variables::Vector{String},
 
 	if has_values(m)
 
-		fixed_cost,variable_values = process_planning_sol(m,linking_variables)
+		fixed_cost,variable_values = process_planning_sol(m,planning_variables)
 
 		planning_sol = (;planning_sol..., fixed_cost = fixed_cost, values = variable_values)
 		

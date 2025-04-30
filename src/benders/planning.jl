@@ -1,5 +1,5 @@
 """
-    solve_planning_problem(m::Model, linking_variables::Vector{String})
+    solve_planning_problem(m::Model, planning_variables::Vector{String})
 
 Solves the planning (upper-level) problem in the Benders decomposition algorithm.
 
@@ -8,11 +8,10 @@ particularly with negative capacities, by rounding small values to zero if neede
 
 # Arguments
 - `m::Model`: The JuMP model representing the planning problem
-- `linking_variables::Vector{String}`: Names of the variables linking the upper-level and  lower-level subproblems
+- `planning_variables::Vector{String}`: Names of the variables of the planning problem
 
 # Returns
 A NamedTuple containing:
-- `LB`: Lower bound (objective value) of the planning problem
 - `fixed_cost`: Fixed cost component of the solution 
 - `values`: Dictionary mapping linking variable names to their optimal values
 
@@ -21,13 +20,13 @@ If negative capacities are detected, the solver will be reconfigured with `Cross
 and the problem will be re-solved. If the solution fails, the function will compute
 and display conflicting constraints (if the solver supports it) before throwing an error.
 """
-function solve_planning_problem(m::Model,linking_variables::Vector{String})
+function solve_planning_problem(m::Model,planning_variables::Vector{String})
 	
 	
     optimize!(m)
 
     if has_values(m)
-        planning_sol = process_planning_sol(m,linking_variables)
+        planning_sol = process_planning_sol(m,planning_variables)
         LB = objective_value(m)
     else
         compute_conflict!(m)
@@ -47,7 +46,7 @@ function solve_planning_problem(m::Model,linking_variables::Vector{String})
 end
 
 
-function process_planning_sol(m::Model,linking_variables::Vector{String})
+function process_planning_sol(m::Model,planning_variables::Vector{String})
 
     capacity_variables = values(m[:eAvailableCapacity])
 
@@ -63,13 +62,13 @@ function process_planning_sol(m::Model,linking_variables::Vector{String})
             end
         end
         fixed_cost = value(x->planning_variables_values[x], m[:eFixedCost])
-        linking_variables_values = Dict([s => planning_variables_values[variable_by_name(m,s)] for s in linking_variables])
+        planning_variables_values = Dict([s => planning_variables_values[variable_by_name(m,s)] for s in planning_variables])
     else
         fixed_cost = value(m[:eFixedCost])
-        linking_variables_values = Dict([s=>value.(variable_by_name(m,s)) for s in linking_variables])
+        planning_variables_values = Dict([s=>value.(variable_by_name(m,s)) for s in planning_variables])
     end
 
-    planning_sol =  (fixed_cost = fixed_cost, values = linking_variables_values)
+    planning_sol =  (fixed_cost = fixed_cost, values = planning_variables_values)
 
     return planning_sol
     
