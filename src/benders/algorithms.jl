@@ -83,10 +83,9 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 	end
 
     #### Initialize UB and LB
-	planning_sol = solve_planning_problem(planning_problem,linking_variables);
+	planning_sol, LB = solve_planning_problem(planning_problem,linking_variables);
 
     UB = Inf;
-    LB = planning_sol.LB;
 
     LB_hist = Float64[];
     UB_hist = Float64[];
@@ -126,13 +125,13 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 
 		start_planning_sol = time()
 
-		unst_planning_sol = solve_planning_problem(planning_problem,linking_variables);
+		unst_planning_sol, LBnew = solve_planning_problem(planning_problem,linking_variables);
 
 		cpu_planning_sol = time()-start_planning_sol;
 		@info("Solving the planning problem required $cpu_planning_sol seconds")
 
-		LB = max(LB,unst_planning_sol.LB);
-		@info("The optimal value of the planning problem is $(unst_planning_sol.LB)")
+		LB = max(LB,LBnew);
+		@info("The optimal value of the planning problem is $LBnew")
 		
 		append!(LB_hist,LB)
         append!(UB_hist,UB)
@@ -152,8 +151,7 @@ function benders(planning_problem::Model,linking_variables::Vector{String},subpr
 				UB = Inf;
 				set_integer.(integer_variables)
 				set_binary.(binary_variables)
-				planning_sol = solve_planning_problem(planning_problem,linking_variables);
-				LB = planning_sol.LB;
+				planning_sol, LB = solve_planning_problem(planning_problem,linking_variables);
 				planning_sol_best = deepcopy(planning_sol);
 				integer_routine_flag = false;
 			else

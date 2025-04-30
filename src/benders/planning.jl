@@ -27,8 +27,8 @@ function solve_planning_problem(m::Model,linking_variables::Vector{String})
     optimize!(m)
 
     if has_values(m)
-        fixed_cost, linking_variables_values = process_planning_sol(m::Model,linking_variables::Vector{String})
-        planning_sol =  (LB = objective_value(m), fixed_cost = fixed_cost, values = linking_variables_values)
+        planning_sol = process_planning_sol(m,linking_variables)
+        LB = objective_value(m)
     else
         compute_conflict!(m)
         list_of_conflicting_constraints = ConstraintRef[];
@@ -43,7 +43,7 @@ function solve_planning_problem(m::Model,linking_variables::Vector{String})
         @error "The planning solution failed. This should not happen."
     end
 
-    return planning_sol
+    return planning_sol, LB
 end
 
 
@@ -69,7 +69,9 @@ function process_planning_sol(m::Model,linking_variables::Vector{String})
         linking_variables_values = Dict([s=>value.(variable_by_name(m,s)) for s in linking_variables])
     end
 
-    return fixed_cost, linking_variables_values
+    planning_sol =  (fixed_cost = fixed_cost, values = linking_variables_values)
+
+    return planning_sol
     
 end
 
