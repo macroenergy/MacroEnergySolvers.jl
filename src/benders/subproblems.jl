@@ -92,6 +92,16 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 		lambda = [dual(FixRef(variable_by_name(m,y))) for y in linking_variables_sub];
 		theta_coeff = 1;	
     elseif expect_feasible_subproblems==true
+        compute_conflict!(m)
+            list_of_conflicting_constraints = ConstraintRef[];
+            for (F, S) in list_of_constraint_types(m)
+                for con in all_constraints(m, F, S)
+                    if get_attribute(con, MOI.ConstraintConflictStatus()) == MOI.IN_CONFLICT
+                        push!(list_of_conflicting_constraints, con)
+                    end
+                end
+            end
+        display(list_of_conflicting_constraints)
         @error "The subproblem is infeasible, but ExpectFeasibleSubproblems = true. Set it to false to generate feasibility cuts."
     else
         @info "Subproblem is infeasible, generating feasibility cut..."

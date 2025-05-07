@@ -51,7 +51,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 	expect_feasible_subproblems = setup[:ExpectFeasibleSubproblems];
 
 	if expect_feasible_subproblems == true
-		@info("Slacks not added because ExpectFeasibleSubproblems is set to true.")
+		@info("Feasibility cuts will not be computed because ExpectFeasibleSubproblems is set to true.")
 	else
 		add_slacks_to_subproblems!(subproblems);
 	end
