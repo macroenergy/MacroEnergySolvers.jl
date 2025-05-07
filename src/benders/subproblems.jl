@@ -20,14 +20,14 @@ end
 function add_slacks_to_local_subproblems!(subproblem_local::Vector{Dict{Any,Any}})
 
     for sp in subproblem_local
-        add_slacks_to_subproblem!(sp[:model],sp[:slack_penalty_value]);
+        add_slacks_to_subproblem!(sp[:model]);
     end
     return nothing
 end
 
 
-function add_slacks_to_subproblem!(subproblem::Model,slack_penalty_value::Union{Float64,Nothing}=nothing)
-    ### Slack variables are added to the subproblems and fixed to zero if slack_penalty_value is not set. 
+function add_slacks_to_subproblem!(subproblem::Model)
+    ### Slack variables are added to the subproblems and fixed to zero. 
     ### We will then allow slack variables to be non-zero to generate feasibility cuts when a subproblem is infeasible.
 
     eq_cons =  all_constraints(subproblem,AffExpr,MOI.EqualTo{Float64})
@@ -60,13 +60,8 @@ function add_slacks_to_subproblem!(subproblem::Model,slack_penalty_value::Union{
         @constraint(subproblem, [i in 1:n], -slack_eq[i] <= slack_max)
     end
 
-    #### Note: if slack_penalty_value is not set, then the slack variables are fixed to zero
-    if isnothing(slack_penalty_value)
         fix.(slack_max,0.0); 
-    else
-        set_objective_coefficient(subproblem, slack_max, slack_penalty_value);
-    end
-
+    
 
     return nothing
 end

@@ -18,7 +18,6 @@ In the case of Benders decomposition, the user must generate the inputs for func
     - `:model =>` JuMP model of the subproblem (`Model`)
     - `:linking_variables_sub =>` linking variables that belong to the subproblem (`Vector{String}`)
     - `:subproblem_index =>` index of the subproblem as it appears in the array of subproblems (`Int64`)
-    - `:slack_penalty_value` => penalty to be added to the objective functions when slacks are used to guarantee that the subproblems are feasible. When this is `nothing`, the algorithm will generate feasibility-cuts if a subproblem is infeasible (`Float64` or `nothing`).
 3. `linking_variables_sub` is a `Dict` mapping each subproblem index to the corresponding `Vector{String}` of linking variables.
 4. `setup` is a `Dict` containing the settings of the Benders run, whose defaults are:
     ```
