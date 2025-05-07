@@ -35,8 +35,7 @@ setup = Dict(
     :StabParam => 0.0,
     :StabDynamic => false,
     :IntegerInvestment => false,
-    :Distributed => false,
-    :IncludeAutomaticSlackPenalty => false
+    :Distributed => false
 )
 
 # Create a decomposed model (see below for details)
@@ -68,8 +67,7 @@ In the case of Benders decomposition, the user must generate the inputs for func
         :StabParam => 0.0,
         :StabDynamic => false,
         :IntegerInvestment => false,
-        :Distributed => false,
-        :IncludeAutomaticSlackPenalty => false
+        :Distributed => false
     )
     ```
 
