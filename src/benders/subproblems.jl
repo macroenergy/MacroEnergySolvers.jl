@@ -79,7 +79,7 @@ function fix_linking_variables!(m::Model,planning_sol::NamedTuple,linking_variab
 	end
 end
 
-function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_sub::Vector{String})
+function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_sub::Vector{String},expect_feasible_subproblems::Bool)
 	
     ### Solve the operational subproblem. If it is infeasible, compute feasibility cuts.
 
@@ -91,7 +91,9 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 		op_cost = objective_value(m);
 		lambda = [dual(FixRef(variable_by_name(m,y))) for y in linking_variables_sub];
 		theta_coeff = 1;	
-	else
+    elseif expect_feasible_subproblems==true
+        @error "The subproblem is infeasible, but ExpectFeasibleSubproblems = true. Set it to false to generate feasibility cuts."
+    else
         @info "Subproblem is infeasible, generating feasibility cut..."
         #### Feasibility cuts generation based on https://link.springer.com/chapter/10.1007/978-3-030-45771-6_7 
         
@@ -128,14 +130,14 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 end
 
 
-function solve_local_subproblems(subproblem_local::Vector{Dict{Any,Any}},planning_sol::NamedTuple)
+function solve_local_subproblems(subproblem_local::Vector{Dict{Any,Any}},planning_sol::NamedTuple, expect_feasible_subproblems::Bool)
 
     local_sol=Dict();
     for sp in subproblem_local
         m = sp[:model];
         linking_variables_sub = sp[:linking_variables_sub]
         w = sp[:subproblem_index];
-		local_sol[w] = solve_subproblem(m,planning_sol,linking_variables_sub);
+		local_sol[w] = solve_subproblem(m,planning_sol,linking_variables_sub,expect_feasible_subproblems);
     end
     return local_sol
 end
@@ -168,7 +170,7 @@ A merged dictionary containing results from all subproblems, where each entry co
 Uses `@sync` and `@async` for coordinated parallel execution, with results fetched from each worker
 and merged into a single dictionary containing all subproblem solutions.
 """
-function solve_subproblems(m_subproblems::DArray{Dict{Any, Any}, 1, Vector{Dict{Any, Any}}},planning_sol::NamedTuple)
+function solve_subproblems(m_subproblems::DArray{Dict{Any, Any}, 1, Vector{Dict{Any, Any}}},planning_sol::NamedTuple,expect_feasible_subproblems::Bool)
 
     p_id = workers();
     np_id = length(p_id);
@@ -176,7 +178,7 @@ function solve_subproblems(m_subproblems::DArray{Dict{Any, Any}, 1, Vector{Dict{
     sub_results = [Dict() for k in 1:np_id];
 
     @sync for k in 1:np_id
-              @async sub_results[k]= @fetchfrom p_id[k] solve_local_subproblems(localpart(m_subproblems),planning_sol); ### This is equivalent to fetch(@spawnat p .....)
+              @async sub_results[k]= @fetchfrom p_id[k] solve_local_subproblems(localpart(m_subproblems),planning_sol,expect_feasible_subproblems); ### This is equivalent to fetch(@spawnat p .....)
     end
 
 	sub_results = merge(sub_results...);
@@ -185,9 +187,9 @@ function solve_subproblems(m_subproblems::DArray{Dict{Any, Any}, 1, Vector{Dict{
 end
 
 
-function solve_subproblems(m_subproblems::Vector{Dict{Any, Any}},planning_sol::NamedTuple)
+function solve_subproblems(m_subproblems::Vector{Dict{Any, Any}},planning_sol::NamedTuple,expect_feasible_subproblems::Bool)
     
-    sub_results = solve_local_subproblems(m_subproblems,planning_sol); 
+    sub_results = solve_local_subproblems(m_subproblems,planning_sol,expect_feasible_subproblems); 
 
     return sub_results
 end

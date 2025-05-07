@@ -48,7 +48,13 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 	old_logger = set_logger(Logging.Info)
 	@info("Running Benders decomposition algorithm from `MacroEnergySolvers.jl`")
 	
-	add_slacks_to_subproblems!(subproblems);
+	expect_feasible_subproblems = setup[:ExpectFeasibleSubproblems];
+
+	if expect_feasible_subproblems == true
+		@info("Slacks not added because ExpectFeasibleSubproblems is set to true.")
+	else
+		add_slacks_to_subproblems!(subproblems);
+	end
 
 	## Start solver time
 	solver_start_time = time()
@@ -58,7 +64,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
     ConvTol = setup[:ConvTol];
 	MaxCpuTime = setup[:MaxCpuTime];
 	γ = setup[:StabParam];
-
+	
 	stab_dynamic = setup[:StabDynamic];
 
 	if γ ≈ 0.0
@@ -102,7 +108,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 
 		planning_sol_hist = hcat(planning_sol_hist, [planning_sol.values[s] for s in planning_variables])
 		
-        subop_sol = solve_subproblems(subproblems,planning_sol);
+        subop_sol = solve_subproblems(subproblems,planning_sol,expect_feasible_subproblems);
         
 		cpu_subop_sol = time()-start_subop_sol;
 		@info("Solving the subproblems required $cpu_subop_sol seconds")

@@ -66,7 +66,8 @@ In the case of Benders decomposition, the user must generate the inputs for func
         :StabParam => 0.0,
         :StabDynamic => false,
         :IntegerInvestment => false,
-        :Distributed => false
+        :Distributed => false,
+        :ExpectFeasibleSubproblems => false
     )
     ```
 
