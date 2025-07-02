@@ -3,7 +3,6 @@ module MacroEnergySolvers
     using JuMP
     using Distributed
     using DistributedArrays
-    using ClusterManagers
     using Pkg
     using Dates, Logging
 
