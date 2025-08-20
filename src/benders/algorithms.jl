@@ -25,6 +25,7 @@ A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computat
 	- `StabParam`: Stabilization parameter γ
 	- `StabDynamic`: Boolean for dynamic stabilization adjustment
 	- `IntegerInvestment`: Boolean for integer investment variables
+- `reformat_logging::Bool = false`: MacroEnergySolvers will reformat logging output if set to true
 
 # Returns
 @NamedTuple containing:
@@ -36,7 +37,7 @@ A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computat
 - `cpu_time`: CPU time history
 - `planning_sol_hist`: Solution history for linking variables
 """
-function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray},linking_variables_sub::Dict,setup::Dict)
+function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any}},DistributedArrays.DArray},linking_variables_sub::Dict,setup::Dict, reformat_logging::Bool=false)
 	
     #### Algorithm from:
     ### F. Pecci and J. D. Jenkins (2025). “Regularized Benders Decomposition for High Performance Capacity Expansion Models”. doi: https://doi.org/10.1109/TPWRS.2025.3526413
@@ -45,7 +46,12 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 	### A. Jacobson, F. Pecci, N. Sepulveda, Q. Xu, and J. Jenkins (2024). “A computationally efficient Benders decomposition for energy systems planning problems with detailed operations and time-coupling constraints.” doi: https://doi.org/10.1287/ijoo.2023.0005
 
 	# Initialize the MacroEnergySolvers logger
-	old_logger = set_logger(Logging.Info)
+	if reformat_logging
+		old_logger = set_logger(Logging.Info)
+		LOGS_REFORMATTED = true
+	else
+		LOGS_REFORMATTED = false
+	end
 	@info("Running Benders decomposition algorithm from `MacroEnergySolvers.jl`")
 	
 	expect_feasible_subproblems = setup[:ExpectFeasibleSubproblems];
@@ -111,7 +117,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
         subop_sol = solve_subproblems(subproblems,planning_sol,expect_feasible_subproblems);
         
 		cpu_subop_sol = time()-start_subop_sol;
-		@info("Solving the subproblems required $cpu_subop_sol seconds")
+		@info("Solving the subproblems required $(tidy_timing(cpu_subop_sol)) seconds")
 
 		UBnew = compute_upper_bound(planning_problem,planning_sol,subop_sol);
 		if UBnew < UB
@@ -120,20 +126,20 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 			UB = UBnew;
 		end
 
-		print("Updating the planning problem....")
+		@info("Updating the planning problem....")
 		time_start_update = time()
 
 		update_planning_problem_multi_cuts!(planning_problem,subop_sol,planning_sol,linking_variables_sub)
-		
+
 		time_planning_update = time()-time_start_update
-		println("done (it took $time_planning_update s).")
+		@info("Done updating the planning problem. It took $(tidy_timing(time_planning_update)) seconds).")
 
 		start_planning_sol = time()
 
 		unst_planning_sol, LBnew = solve_planning_problem(planning_problem,planning_variables);
 
 		cpu_planning_sol = time()-start_planning_sol;
-		@info("Solving the planning problem required $cpu_planning_sol seconds")
+		@info("Solving the planning problem required $(tidy_timing(cpu_planning_sol)) seconds")
 
 		LB = max(LB,LBnew);
 		@info("The optimal value of the planning problem is $LBnew")
@@ -144,10 +150,11 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 
 		running_gap = (UB-LB)/abs(LB)
 
+		info_string = "k = $k      LB = $(round_from_tol(LB, ConvTol, 2))     UB = $(round_from_tol(UB, ConvTol, 2))       Gap = $(round_from_tol(running_gap, ConvTol, 2))       CPU Time = $(tidy_timing(cpu_time[end]))"
 		if any(subop_sol[w].theta_coeff==0 for w in keys(subop_sol))
-			@info(string("***k = ", k,"      LB = ", round_from_tol(LB, ConvTol, 2),"     UB = ", round_from_tol(UB, ConvTol, 2),"       Gap = ", round_from_tol(running_gap, ConvTol, 2),"       CPU Time = ", round(cpu_time[end], digits=5)))
+			@info("*** $info_string")
 		else
-			@info(string("k = ", k,"      LB = ", round_from_tol(LB, ConvTol, 2),"     UB = ", round_from_tol(UB, ConvTol, 2),"       Gap = ", round_from_tol(running_gap, ConvTol, 2),"       CPU Time = ", round(cpu_time[end], digits=5)))
+			@info("$info_string")
 		end
 
         if running_gap <= ConvTol
@@ -195,7 +202,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 					planning_sol = solve_int_level_set_problem(planning_problem,planning_variables,unst_planning_sol,LB,UB,γ);
 				end
 				cpu_stab_method = time()-start_stab_method;
-				@info("Solving the interior level set problem required $cpu_stab_method seconds")
+				@info("Solving the interior level set problem required $(tidy_timing(cpu_stab_method)) seconds")
 			else
 				planning_sol = deepcopy(unst_planning_sol);
 			end
@@ -204,8 +211,10 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 
     end
 
-	# Restore the old logger
-	set_logger(old_logger)
+	if reformat_logging && LOGS_REFORMATTED
+		# Restore the old logger
+		set_logger(old_logger)
+	end
 	
 	return (planning_problem=planning_problem,planning_sol = planning_sol_best, subop_sol = subop_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time, planning_sol_hist = planning_sol_hist)
 end
