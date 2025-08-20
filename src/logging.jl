@@ -22,3 +22,8 @@ function round_from_tol(n::Real, tol::Real, rshift::Int)
     # Round a number n to the same number of digits as the tolerance (+ shift on the right)
     return round(n, digits = (-1) * get_exponent_sciform(tol) + rshift)
 end
+
+# Functions to round / reformat timing records
+function tidy_timing(time::Real)
+    return round(time, digits = 3)
+end
