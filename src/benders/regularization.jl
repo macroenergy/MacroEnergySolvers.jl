@@ -29,17 +29,19 @@ function solve_int_level_set_problem(m::Model,planning_variables::Vector{String}
 	
 	### Interior point regularization based on https://ieeexplore.ieee.org/document/10829583
 
-	@constraint(m,cLevel_set,m[:eFixedCost] + m[:eApproximateVariableCost]<=LB+γ*(UB-LB))
+	objfun = objective_function(m)
 
-	@objective(m,Min, 0*m[:eApproximateVariableCost])
+	@constraint(m,cLevel_set, objfun <=LB+γ*(UB-LB))
+
+	@objective(m, Min, 0*sum(m[:vTHETA][1]))
 
     optimize!(m)
 
 	if has_values(m)
 
-		fixed_cost,variable_values = process_planning_sol(m,planning_variables)
+		planning_cost,variable_values = process_planning_sol(m,planning_variables)
 
-		planning_sol = (;planning_sol..., fixed_cost = fixed_cost, values = variable_values)
+		planning_sol = (;planning_sol..., planning_cost = planning_cost, values = variable_values)
 		
 	else
 		
@@ -49,7 +51,7 @@ function solve_int_level_set_problem(m::Model,planning_variables::Vector{String}
 
 	delete(m,m[:cLevel_set])
 	unregister(m,:cLevel_set)
-	@objective(m,Min, m[:eFixedCost] + m[:eApproximateVariableCost])
+	@objective(m,Min, objfun)
 	
 	return planning_sol
 

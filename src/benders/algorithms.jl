@@ -62,6 +62,8 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 		add_slacks_to_subproblems!(subproblems);
 	end
 
+	add_approximate_variable_cost!(planning_problem,length(linking_variables_sub));
+
 	## Start solver time
 	solver_start_time = time()
     
@@ -253,9 +255,5 @@ end
 function compute_upper_bound(m::Model,planning_sol::NamedTuple,subop_sol::Dict)
 	any(subop_sol[w].theta_coeff==0 for w in keys(subop_sol)) && return Inf;
 
-	point = Dict(m[:vTHETA][w] => subop_sol[w].op_cost for w in keys(subop_sol));
-
-	UB = planning_sol.fixed_cost + value(x -> point[x], m[:eApproximateVariableCost])
-
-	return UB
+	return  planning_sol.planning_cost + sum(subop_sol[w].op_cost for w in keys(subop_sol))
 end
