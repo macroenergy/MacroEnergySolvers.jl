@@ -47,10 +47,7 @@ results = benders(planning_problem, planning_variables, subproblems, linking_var
 
 In the case of Benders decomposition, the user must generate the inputs for function `benders(planning_problem,planning_variables,subproblems,linking_variables_sub,setup)` where:
 
-1. `planning_problem` is a JuMP model describing a Benders planning problem whose objective function is given by: `planning_problem[:eFixedCost] + planning_problem[:eApproximateVariableCost]`, where:
-   
-   -  `planning_problem[:eFixedCost]` is a JuMP expression computing fixed costs
-   -  `planning_problem[:eApproximateVariableCost]` is a JuMP expression computing the approximation of variable cost based on the auxiliary variables in vector `planning_problem[:vTHETA]`
+1. `planning_problem` is a JuMP model describing a planning problem (without the auxiliary variables that estimate operating costs).
 2. `subproblems` can be either a vector or a distributed array of `Dict`. Each dict has keys:
     - `:model =>` JuMP model of the subproblem (`Model`)
     - `:linking_variables_sub =>` linking variables that belong to the subproblem (`Vector{String}`)
