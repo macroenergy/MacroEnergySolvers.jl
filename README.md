@@ -10,8 +10,8 @@ Other algorithms are possible and could be added in the future (e.g., [Nested Be
 
 In the case of Benders decomposition, the user must generate the inputs for function `benders(planning_problem,subproblems,linking_variables_sub,setup)` where:
 
-1. `planning_problem` is a JuMP model describing a planning problem (without the auxiliary variables that estimate operating costs). The planning problem must include:
-    - A JuMP expression named `eLowerBoundOperatingCost` representing an valid under-estimator of the operating cost in each subperiod.
+1. `planning_problem` is a JuMP model describing a planning problem (without auxiliary variables to estimate operating costs). The planning problem must include:
+    - A JuMP expression named `eLowerBoundOperatingCost` representing an initial global under-estimator of the operating cost in each subperiod (default is `0.0`).
 2. `subproblems` can be either a vector or a distributed array of `Dict`. Each dict has keys:
     - `:model =>` JuMP model of the subproblem (`Model`)
     - `:linking_variables_sub =>` linking variables that belong to the subproblem (`Vector{String}`)
