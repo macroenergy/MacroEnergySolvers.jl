@@ -47,7 +47,9 @@ end
 
 function add_approximate_variable_cost!(m::Model, number_of_subproblems::Int)
 
-    @variable(m, vTHETA[w in 1:number_of_subproblems] .>= 0)
+    @variable(m, vTHETA[w in 1:number_of_subproblems])
+
+    @constraint(m, cThetaLowerBound[w in 1:number_of_subproblems], vTHETA[w] >= m[:eLowerBoundOperatingCost][w])
 
     @expression(m, ePlanningCost, objective_function(m))
 
