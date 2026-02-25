@@ -45,6 +45,22 @@ function solve_planning_problem(m::Model,planning_variables::Vector{String})
     return planning_sol, LB
 end
 
+function add_approximate_variable_cost!(m::Model, number_of_subproblems::Int)
+
+    @variable(m, vTHETA[w in 1:number_of_subproblems])
+
+    if haskey(m, :eLowerBoundOperatingCost)
+        @constraint(m, cThetaLowerBound[w in 1:number_of_subproblems], vTHETA[w] >= m[:eLowerBoundOperatingCost][w])
+    else
+        @constraint(m, cThetaLowerBound[w in 1:number_of_subproblems], vTHETA[w] >= 0.0)
+    end
+
+    @expression(m, ePlanningCost, objective_function(m))
+
+    @objective(m, Min, m[:ePlanningCost] + sum(m[:vTHETA][w] for w in 1:number_of_subproblems))
+
+end
+
 
 function process_planning_sol(m::Model,planning_variables::Vector{String})
 
@@ -61,14 +77,14 @@ function process_planning_sol(m::Model,planning_variables::Vector{String})
                 planning_variables_values[v] = value(v)
             end
         end
-        fixed_cost = value(x->planning_variables_values[x], m[:eFixedCost])
+        planning_cost = value(x->planning_variables_values[x], m[:ePlanningCost])
         planning_variables_values = Dict([s => planning_variables_values[variable_by_name(m,s)] for s in planning_variables])
     else
-        fixed_cost = value(m[:eFixedCost])
+        planning_cost =  value(m[:ePlanningCost])
         planning_variables_values = Dict([s=>value.(variable_by_name(m,s)) for s in planning_variables])
     end
 
-    planning_sol =  (fixed_cost = fixed_cost, values = planning_variables_values)
+    planning_sol =  (planning_cost = planning_cost, values = planning_variables_values)
 
     return planning_sol
     
