@@ -72,7 +72,8 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
     ConvTol = setup[:ConvTol];
 	MaxCpuTime = setup[:MaxCpuTime];
 	γ = setup[:StabParam];
-	
+	term_status = "NONE";
+
 	stab_dynamic = setup[:StabDynamic];
 
 	if γ ≈ 0.0
@@ -102,6 +103,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 
     LB_hist = Float64[];
     UB_hist = Float64[];
+	gap_hist = Float64[];
     cpu_time = Float64[];
 
 	planning_sol_best = deepcopy(planning_sol);
@@ -146,11 +148,12 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 		LB = max(LB,LBnew);
 		@info("The optimal value of the planning problem is $LBnew")
 		
+		running_gap = (UB-LB)/abs(LB)
+
 		append!(LB_hist,LB)
         append!(UB_hist,UB)
         append!(cpu_time,time()-solver_start_time)
-
-		running_gap = (UB-LB)/abs(LB)
+		append!(gap_hist, running_gap)
 
 		info_string = "k = $k      LB = $(round_from_tol(LB, ConvTol, 2))     UB = $(round_from_tol(UB, ConvTol, 2))       Gap = $(round_from_tol(running_gap, ConvTol, 2))       CPU Time = $(tidy_timing(cpu_time[end]))"
 		if any(subop_sol[w].theta_coeff==0 for w in keys(subop_sol))
@@ -160,18 +163,32 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 		end
 
         if running_gap <= ConvTol
-			if integer_routine_flag
-				@info("*** Switching on integer constraints *** ")
-				UB = Inf;
-				set_integer.(integer_variables)
-				set_binary.(binary_variables)
-				planning_sol, LB = solve_planning_problem(planning_problem,planning_variables);
-				planning_sol_best = deepcopy(planning_sol);
-				integer_routine_flag = false;
-			else
+			if running_gap < 0
+				@info("*** Warning: Negative gap detected, terminating (Gap= $(round_from_tol(running_gap, ConvTol, 2)))  ***")
+				term_status = "NEGATIVE GAP"
 				break
+			else
+				if integer_routine_flag
+					@info("*** Switching on integer constraints *** ")
+					UB = Inf;
+					set_integer.(integer_variables)
+					set_binary.(binary_variables)
+					planning_sol, LB = solve_planning_problem(planning_problem,planning_variables);
+					planning_sol_best = deepcopy(planning_sol);
+					integer_routine_flag = false;
+				else
+					@info("*** Terminating because optimal solution found (Gap= $(round_from_tol(running_gap, ConvTol, 2)))  ***")
+					term_status = "OPTIMAL"
+					break
+				end
 			end
-		elseif (cpu_time[end] >= MaxCpuTime)|| (k == MaxIter)
+		elseif (cpu_time[end] >= MaxCpuTime)
+			@info("*** Terminating because CPU time limit reached (MaxCpuTime=$MaxCpuTime)  ***")
+			term_status = "TIMELIMIT"
+			break
+		elseif k == MaxIter
+			@info("*** Terminating because maximum number of iterations reached (MaxIter=$MaxIter)  ***")
+			term_status = "MAXITER"
 			break
 		elseif UB==Inf
 			planning_sol = deepcopy(unst_planning_sol);
@@ -218,7 +235,8 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 		set_logger(old_logger)
 	end
 	
-	return (planning_problem=planning_problem,planning_sol = planning_sol_best, subop_sol = subop_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,cpu_time = cpu_time, planning_sol_hist = planning_sol_hist)
+	return (planning_problem=planning_problem,planning_sol = planning_sol_best, subop_sol = subop_sol_best,LB_hist = LB_hist,UB_hist = UB_hist,gap_hist = gap_hist, termination_status = term_status, cpu_time = cpu_time, planning_sol_hist = planning_sol_hist)
+	
 end
 
 function update_planning_problem_multi_cuts!(m::Model,subop_sol::Dict,planning_sol::NamedTuple,linking_variables_sub::Dict)
