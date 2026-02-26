@@ -1,7 +1,7 @@
 name = "MacroEnergySolvers"
 uuid = "466a4f75-6c9c-4ef2-97df-f5f43ac00c23"
 authors = ["Filippo Pecci <peccifilippo@gmail.com>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
