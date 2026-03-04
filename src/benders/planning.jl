@@ -47,6 +47,11 @@ end
 
 function add_approximate_variable_cost!(m::Model, number_of_subproblems::Int)
 
+    if haskey(m, :vTHETA)
+        @warn "Variable vTHETA already exists in the model. Skipping addition of approximate variable cost because it has already been added."
+        return
+    end
+
     @variable(m, vTHETA[w in 1:number_of_subproblems])
 
     if haskey(m, :eLowerBoundOperatingCost)
