@@ -30,6 +30,12 @@ function add_slacks_to_subproblem!(subproblem::Model)
     ### Slack variables are added to the subproblems and fixed to zero. 
     ### We will then allow slack variables to be non-zero to generate feasibility cuts when a subproblem is infeasible.
 
+    if haskey(subproblem, :slack_max)
+        @warn "Variable slack_max already exists in the model. Skipping addition of slack variables"
+        @warn "If user is rerunning a model and has updated any constraints, new constraints added since last solve will NOT include the slack. Proceed with caution."
+        return nothing
+    end
+
     eq_cons =  all_constraints(subproblem,AffExpr,MOI.EqualTo{Float64})
     less_ineq_cons = all_constraints(subproblem,AffExpr,MOI.LessThan{Float64})
     greater_ineq_cons = all_constraints(subproblem,AffExpr,MOI.GreaterThan{Float64})

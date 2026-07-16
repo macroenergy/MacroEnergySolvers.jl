@@ -93,6 +93,8 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 		binary_variables = planning_variables_ref[is_binary.(planning_variables_ref)];
 		unset_integer.(integer_variables)
 		unset_binary.(binary_variables)
+		set_lower_bound.(binary_variables, 0)
+		set_upper_bound.(binary_variables, 1)
 		integer_routine_flag = true;
 	end
 
