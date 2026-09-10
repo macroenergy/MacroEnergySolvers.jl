@@ -177,6 +177,10 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 					set_binary.(binary_variables)
 					planning_sol, LB = solve_planning_problem(planning_problem,planning_variables);
 					planning_sol_best = deepcopy(planning_sol);
+					# UB was reset to Inf, so there is no evaluated incumbent yet. Clear the
+					# relaxed-phase subproblem solutions rather than leave them paired with the
+					# new integer planning solution they do not correspond to.
+					subop_sol_best = Dict{Any,Any}();
 					integer_routine_flag = false;
 				else
 					@info("*** Terminating because optimal solution found (Gap= $(round_from_tol(running_gap, ConvTol, 2)))  ***")
