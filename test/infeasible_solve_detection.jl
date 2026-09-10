@@ -59,4 +59,40 @@
         infeasible = MES.solve_subproblem(m, (values = Dict("x" => 0.0),), ["x"], false)
         @test infeasible.theta_coeff == 0
     end
+    @testset "an infeasible solve raises instead of falling through" begin
+        # @error only logs and lets execution continue, so each of these paths used to run on
+        # into code that assumes a solution exists.
+
+        # solve_planning_problem: planning_sol and LB are never assigned on this path, so it
+        # used to fail with UndefVarError at the return rather than reporting the real cause.
+        p = Model(HiGHS.Optimizer); set_silent(p)
+        @variable(p, 0 <= xp <= 5)
+        @constraint(p, xp >= 20)
+        @objective(p, Min, xp)
+        @test_throws ErrorException MES.solve_planning_problem(p, ["xp"])
+
+        # solve_subproblem with ExpectFeasibleSubproblems = true: op_cost is never assigned.
+        s = Model(HiGHS.Optimizer); set_silent(s)
+        @variable(s, x >= 0)
+        @variable(s, g_cheap >= 0)
+        @variable(s, 0 <= g_exp <= 3)
+        @constraint(s, g_cheap <= x)
+        @constraint(s, g_cheap + g_exp == 10)
+        @objective(s, Min, 1*g_cheap + 5*g_exp)
+        MES.add_slacks_to_subproblem!(s)
+        @test_throws ErrorException MES.solve_subproblem(s, (values = Dict("x" => 0.0),), ["x"], true)
+
+        # The relaxed subproblem itself infeasible. Slacks are added to affine constraints only,
+        # so an infeasibility that comes from variable bounds cannot be relaxed away. This path
+        # returned an objective value and duals read off an infeasible point, which became an
+        # unsatisfiable cut in the planning problem.
+        b = Model(HiGHS.Optimizer); set_silent(b)
+        @variable(b, x >= 0)
+        @variable(b, y >= 5)
+        set_upper_bound(y, 3.0)
+        @constraint(b, y <= x)
+        @objective(b, Min, y)
+        MES.add_slacks_to_subproblem!(b)
+        @test_throws ErrorException MES.solve_subproblem(b, (values = Dict("x" => 0.0),), ["x"], false)
+    end
 end

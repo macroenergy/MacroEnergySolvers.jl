@@ -39,7 +39,7 @@ function solve_planning_problem(m::Model,planning_variables::Vector{String})
             end
         end
         display(list_of_conflicting_constraints)
-        @error "The planning solution failed. This should not happen."
+        error("The planning solution failed. This should not happen.")
     end
 
     return planning_sol, LB
