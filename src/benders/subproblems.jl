@@ -93,7 +93,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 
 	optimize!(m)
 	
-	if has_values(m)
+	if solved_with_duals(m)
 		op_cost = objective_value(m);
 		lambda = [dual(FixRef(variable_by_name(m,y))) for y in linking_variables_sub];
 		theta_coeff = 1;	
@@ -108,7 +108,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
                 end
             end
         display(list_of_conflicting_constraints)
-        @error "The subproblem is infeasible, but ExpectFeasibleSubproblems = true. Set it to false to generate feasibility cuts."
+        error("The subproblem is infeasible, but ExpectFeasibleSubproblems = true. Set it to false to generate feasibility cuts.")
     else
         @info "Subproblem is infeasible, generating feasibility cut..."
         #### Feasibility cuts generation based on https://link.springer.com/chapter/10.1007/978-3-030-45771-6_7 
@@ -118,7 +118,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
         @objective(m, Min, m[:slack_max])
         
         optimize!(m)
-        if !has_values(m)
+        if !solved_with_duals(m)
             compute_conflict!(m)
             list_of_conflicting_constraints = ConstraintRef[];
             for (F, S) in list_of_constraint_types(m)
@@ -129,7 +129,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
                 end
             end
             display(list_of_conflicting_constraints)
-            @error "Feasibility subproblem is infeasible, this should not happen. Check the model."
+            error("Feasibility subproblem is infeasible, this should not happen. Check the model.")
         end
         op_cost = objective_value(m);
         lambda = [dual(FixRef(variable_by_name(m,y))) for y in linking_variables_sub];

@@ -6,6 +6,7 @@ module MacroEnergySolvers
     using Pkg
     using Dates, Logging
 
+    include("benders/solution_status.jl")
     include("benders/planning.jl")
     include("benders/subproblems.jl")
     include("benders/regularization.jl")

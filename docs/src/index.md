@@ -93,6 +93,16 @@ solve_subproblems
 solve_int_level_set_problem
 ```
 
+### `solved_and_feasible`
+```@docs
+solved_and_feasible
+```
+
+### `solved_with_duals`
+```@docs
+solved_with_duals
+```
+
 
 
 
