@@ -37,7 +37,7 @@ function solve_int_level_set_problem(m::Model,planning_variables::Vector{String}
 
     optimize!(m)
 
-	if has_values(m)
+	if solved_and_feasible(m)
 
 		planning_cost,variable_values = process_planning_sol(m,planning_variables)
 

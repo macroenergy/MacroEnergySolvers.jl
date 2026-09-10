@@ -93,7 +93,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
 
 	optimize!(m)
 	
-	if has_values(m)
+	if solved_with_duals(m)
 		op_cost = objective_value(m);
 		lambda = [dual(FixRef(variable_by_name(m,y))) for y in linking_variables_sub];
 		theta_coeff = 1;	
@@ -118,7 +118,7 @@ function solve_subproblem(m::Model,planning_sol::NamedTuple,linking_variables_su
         @objective(m, Min, m[:slack_max])
         
         optimize!(m)
-        if !has_values(m)
+        if !solved_with_duals(m)
             compute_conflict!(m)
             list_of_conflicting_constraints = ConstraintRef[];
             for (F, S) in list_of_constraint_types(m)
