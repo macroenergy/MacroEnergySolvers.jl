@@ -150,7 +150,7 @@ function benders(planning_problem::Model,subproblems::Union{Vector{Dict{Any, Any
 		LB = max(LB,LBnew);
 		@info("The optimal value of the planning problem is $LBnew")
 		
-		running_gap = (UB-LB)/abs(LB)
+		running_gap = (UB - LB) / max(abs(UB), abs(LB), 1.0)
 
 		append!(LB_hist,LB)
         append!(UB_hist,UB)
